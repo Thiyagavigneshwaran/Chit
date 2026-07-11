@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #1E40AF;
+  --color-primary-light: #3B82F6;
+  --color-primary-dark: #1D4ED8;
+  
+  --color-secondary: #0F172A;
+  --color-secondary-light: #1E293B;
+  --color-secondary-dark: #020617;
+  
+  --color-success: #10B981;
+  --color-success-light: #34D399;
+  --color-success-dark: #059669;
+  
+  --color-warning: #F59E0B;
+  --color-warning-light: #FBBF24;
+  --color-warning-dark: #D97706;
+  
+  --color-background-light: #F8FAFC;
+  --color-background-dark: #0B0F19;
+  
+  --color-card-light: #FFFFFF;
+  --color-card-dark: #1E293B;
+}
+
+html, body, #root {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Custom Scrollbar for modern visual styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.3);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.5);
+}
+
+/* Glassmorphism effects */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.dark .glass-panel {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Micro-animations and transitions */
+.hover-scale {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-scale:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.pulse-glow {
+  animation: pulse-glow-animation 2s infinite alternate;
+}
+
+@keyframes pulse-glow-animation {
+  0% {
+    box-shadow: 0 0 5px rgba(30, 64, 175, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 15px rgba(30, 64, 175, 0.5);
+  }
+}
+
+/* Fade-in for page transitions */
+.fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Glowing text styling */
+.glow-text-blue {
+  text-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+}
