@@ -3,6 +3,7 @@ import { Card, Grid, Typography, Chip, Button, IconButton, TextField, CircularPr
 import { Add, Search, Groups, CalendarMonth, CurrencyExchange, Close, ArrowBack } from '@mui/icons-material';
 import axios from 'axios';
 import { AuthContext } from '../App';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer } from 'recharts';
 
 const getCurrentContribution = (group, dateStr = new Date().toISOString().split('T')[0]) => {
   if (!group) return 0;
@@ -31,6 +32,27 @@ const getCurrentContribution = (group, dateStr = new Date().toISOString().split(
     }
   }
   return parseFloat(group.monthly_contribution) || 0;
+};
+
+const getBidTrendData = (group) => {
+  if (!group || !group.installment_schedule) return [];
+  try {
+    const schedule = typeof group.installment_schedule === 'string'
+      ? JSON.parse(group.installment_schedule)
+      : group.installment_schedule;
+    if (Array.isArray(schedule)) {
+      return schedule.map((item, idx) => {
+        const bidVal = item.bidAmount !== undefined ? parseFloat(item.bidAmount) : 0;
+        return {
+          month: `M${idx + 1}`,
+          discount: bidVal
+        };
+      }).filter(item => item.discount > 0);
+    }
+  } catch (e) {
+    console.error('Failed to parse bid trend data:', e);
+  }
+  return [];
 };
 
 
@@ -747,6 +769,35 @@ export default function ChitGroupsPage() {
                   <span className="font-bold text-slate-700 dark:text-white">{selectedGroup.installments} Months</span>
                 </div>
               </div>
+
+              {/* Bid Discount Trend Chart */}
+              {(() => {
+                const chartData = getBidTrendData(selectedGroup);
+                if (chartData.length > 0) {
+                  return (
+                    <div className="mb-6 space-y-2 p-4 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border border-slate-100 dark:border-slate-800/60">
+                      <Typography variant="subtitle2" className="text-slate-400 uppercase tracking-widest font-black text-[10px]">
+                        Bidding Discount Trend
+                      </Typography>
+                      <div className="h-40">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
+                            <XAxis dataKey="month" stroke="#94A3B8" fontSize={9} />
+                            <YAxis stroke="#94A3B8" fontSize={9} tickFormatter={(val) => `₹${val}`} />
+                            <ChartTooltip 
+                              formatter={(val) => [formatCurrency(val), 'Bid Discount']}
+                              contentStyle={{ borderRadius: 12, border: 'none', backgroundColor: '#0F172A', color: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', fontSize: '10px' }}
+                            />
+                            <Line type="monotone" dataKey="discount" stroke="#3B82F6" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
 
               {/* Installment Breakdown display */}
               {(() => {

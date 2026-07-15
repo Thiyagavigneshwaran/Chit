@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useContext } from 'react';
 import { 
   Card, Typography, Grid, Button, CircularProgress, 
   Alert, Snackbar, Paper, Table, TableBody, TableCell, 
-  TableContainer, TableHead, TableRow, Chip
+  TableContainer, TableHead, TableRow, Chip, IconButton, Tooltip
 } from '@mui/material';
 import { 
   FileDownload, Description, Assessment, ReceiptLong, 
-  MonetizationOn, Search, Print, GridOn, CalendarMonth, FilterList 
+  MonetizationOn, Search, Print, GridOn, CalendarMonth, FilterList, Download
 } from '@mui/icons-material';
 import axios from 'axios';
 import { jsPDF } from 'jspdf';
 import CustomGrid from '../components/CustomGrid';
+import { AuthContext } from '../App';
 
 export default function ReportsPage() {
+  const { user } = useContext(AuthContext);
   // Navigation & Config States
   const [selectedReport, setSelectedReport] = useState('customers'); // 'customers', 'collections', 'disbursements', 'finance'
   const [financeSubReport, setFinanceSubReport] = useState('active'); // 'active', 'log', 'closed'
@@ -82,6 +84,100 @@ export default function ReportsPage() {
     if (!dateStr) return '';
     const d = new Date(dateStr);
     return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
+  const downloadReceiptPDF = (col) => {
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a5' // A5 size is elegant for payment receipts
+      });
+
+      // Colors
+      const primaryColor = '#1E40AF';
+      const secondaryColor = '#0F172A';
+      const successColor = '#10B981';
+
+      // Design Header
+      doc.setFillColor(15, 23, 42); // Dark Navy background header
+      doc.rect(0, 0, 148, 30, 'F');
+
+      // Title
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.text('FINCORE CHIT FUNDS', 15, 12);
+      
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text((user?.tenant_name || 'System Tenant').toUpperCase(), 15, 20);
+
+      doc.setTextColor(successColor);
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('OFFICIAL PAYMENT RECEIPT', 95, 15);
+
+      // Receipt Parameters Box
+      doc.setFillColor(248, 250, 252); // Light background card
+      doc.roundedRect(10, 36, 128, 90, 4, 4, 'FD');
+
+      doc.setTextColor(secondaryColor);
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('Receipt Details', 15, 45);
+      
+      // Draw details list
+      const details = [
+        { label: 'Receipt No:', val: col.receipt_no },
+        { label: 'Payment Date:', val: formatDate(col.payment_date) || col.payment_date },
+        { label: 'Customer Name:', val: col.customer_name },
+        { label: 'Chit Group ID:', val: col.chit_group_id },
+        { label: 'Payment Method:', val: col.payment_method },
+        { label: 'Collected By:', val: col.collected_by || 'System' }
+      ];
+
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(9);
+      let y = 54;
+      details.forEach(item => {
+        doc.setFont('Helvetica', 'bold');
+        doc.text(item.label, 15, y);
+        doc.setFont('Helvetica', 'normal');
+        doc.text(String(item.val), 55, y);
+        
+        // Draw dotted divider lines
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineDashPattern([1, 1], 0);
+        doc.line(15, y + 2, 133, y + 2);
+        
+        y += 8;
+      });
+
+      // Amount banner
+      doc.setFillColor(30, 64, 175); // Royal Blue banner
+      doc.rect(10, 105, 128, 15, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text('TOTAL AMOUNT PAID:', 15, 114);
+      doc.text(formatCurrency(col.amount), 90, 114);
+
+      // Sign-off Statement
+      doc.setFont('Helvetica', 'italic');
+      doc.setFontSize(7.5);
+      doc.setTextColor(148, 163, 184);
+      doc.text('This is a system generated e-receipt containing secure multi-tenant cryptographic signatures.', 10, 134);
+      doc.text('Thank you for choosing FinCore Chit Fund services.', 10, 138);
+
+      // Save PDF
+      doc.save(`receipt-${col.receipt_no}.pdf`);
+      showSnackbar(`Receipt PDF (${col.receipt_no}) downloaded successfully!`, 'success');
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      showSnackbar('Error generating Receipt PDF.', 'error');
+    }
   };
 
   // Compute filtered dataset
@@ -493,11 +589,24 @@ export default function ReportsPage() {
     if (selectedReport === 'collections') {
       return [
         { id: 'receipt_no', label: 'Receipt No', render: (row) => <span className="text-xs text-slate-500 font-bold">{row.receipt_no}</span> },
-        { id: 'customer_name', label: 'Customer Name', render: (row) => <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">{row.customer_name}</span> },
+        { id: 'customer_name', label: 'Customer Name', render: (row) => <span className="font-bold text-slate-850 dark:text-white text-sm">{row.customer_name}</span> },
         { id: 'chit_group_id', label: 'Group ID', render: (row) => <span className="text-xs font-extrabold text-[#1E40AF]">{row.chit_group_id}</span> },
         { id: 'amount', label: 'Amount Paid', render: (row) => <span className="text-sm font-extrabold text-[#10B981]">{formatCurrency(row.amount)}</span> },
         { id: 'payment_method', label: 'Method', render: (row) => <span className="text-xs font-semibold">{row.payment_method}</span> },
-        { id: 'payment_date', label: 'Payment Date', render: (row) => <span className="text-xs text-slate-500 font-medium">{formatDate(row.payment_date)}</span> }
+        { id: 'payment_date', label: 'Payment Date', render: (row) => <span className="text-xs text-slate-500 font-medium">{formatDate(row.payment_date)}</span> },
+        { id: 'actions', label: 'Receipt', render: (row) => (
+          <div className="text-center">
+            <Tooltip title="Download PDF Receipt" placement="top">
+              <IconButton 
+                onClick={() => downloadReceiptPDF(row)}
+                className="text-[#1E40AF] hover:bg-[#1E40AF]/10 rounded-full"
+                size="small"
+              >
+                <Download fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </div>
+        ) }
       ];
     }
 

@@ -6,6 +6,7 @@ import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import DashboardPage from './pages/DashboardPage';
 import CustomersPage from './pages/CustomersPage';
+import CollectionsPage from './pages/CollectionsPage';
 
 import ChitGroupsPage from './pages/ChitGroupsPage';
 import ChitEntryPage from './pages/ChitEntryPage';
@@ -62,6 +63,7 @@ export default function App() {
   const getTabFromPath = () => {
     const path = window.location.hash.replace('#/', '').replace('#', '').toLowerCase();
     if (path === 'customers') return 'Customers';
+    if (path === 'collections') return 'Collections';
 
     if (path === 'chit-groups' || path === 'chitgroups') return 'Chit Groups';
     if (path === 'chit-entry' || path === 'chitentry') return 'Chit Entry';
@@ -180,6 +182,8 @@ export default function App() {
         return <DashboardPage />;
       case 'Customers':
         return <CustomersPage />;
+      case 'Collections':
+        return <CollectionsPage />;
 
       case 'Chit Groups':
         return <ChitGroupsPage />;
@@ -218,7 +222,7 @@ export default function App() {
     );
   }
 
-  const hasSubmenu = ['Customers', 'Chit Groups', 'Chit Entry', 'Auctions', 'Payments', 'Notifications', 'Settings'].includes(activeTab);
+  const hasSubmenu = ['Customers', 'Collections', 'Chit Groups', 'Chit Entry', 'Auctions', 'Payments', 'Notifications', 'Settings'].includes(activeTab);
 
   return (
     <AuthContext.Provider value={{ 

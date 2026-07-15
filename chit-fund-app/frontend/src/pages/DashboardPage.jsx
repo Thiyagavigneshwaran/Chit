@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Card, Grid, Typography, Button, TextField, Select, MenuItem, InputLabel, FormControl, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Snackbar, Alert, CircularProgress } from '@mui/material';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, AreaChart, Area, Legend } from 'recharts';
 import { 
   TrendingUp, PeopleAlt, Payment, HourglassEmpty, 
   ChevronRight, LocalPhone, Email, ReceiptLong 
@@ -137,7 +137,29 @@ export default function DashboardPage() {
     { id: 'id', label: 'Group Code', render: (row) => <span className="font-semibold text-xs text-[#1E40AF]">{row.id}</span> },
     { id: 'name', label: 'Plan Name', render: (row) => <span className="font-bold text-slate-800 dark:text-white text-sm">{row.name}</span> },
     { id: 'value', label: 'Group Value', render: (row) => <span className="font-bold text-slate-800 dark:text-white text-sm">{formatCurrency(row.value)}</span> },
-    { id: 'active_members', label: 'Members', render: (row) => <span className="text-sm font-semibold text-slate-500">{row.active_members} Members</span> },
+    { 
+      id: 'active_members', 
+      label: 'Enrollment Fill-Rate', 
+      render: (row) => {
+        const totalCapacity = row.installments || 20;
+        const count = row.active_members || 0;
+        const percentage = Math.min(100, Math.round((count / totalCapacity) * 100));
+        return (
+          <div className="w-full max-w-[150px] space-y-1">
+            <div className="flex justify-between text-[10px] font-bold text-slate-500">
+              <span>{count} / {totalCapacity} Enrolled</span>
+              <span>{percentage}%</span>
+            </div>
+            <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-[#1E40AF] to-[#10B981] rounded-full transition-all duration-500" 
+                style={{ width: `${percentage}%` }}
+              />
+            </div>
+          </div>
+        );
+      }
+    },
     { id: 'contribution', label: 'Per Member', render: (row) => <span className="font-bold text-[#10B981] text-sm">{formatCurrency(getCurrentContribution(row))}/member</span> }
   ];
 
@@ -245,24 +267,26 @@ export default function DashboardPage() {
 
       {/* Charts Section */}
       <Grid container spacing={3}>
-        {/* Line Chart */}
+        {/* Collections vs Payouts Bar Chart */}
         <Grid item xs={12} md={8}>
           <Card className="p-6 bg-white dark:bg-[#1E293B] border border-slate-100 dark:border-slate-800">
             <Typography variant="h6" className="font-bold mb-4 text-slate-800 dark:text-white">
-              Collection Analytics (Line Chart)
+              Collections vs Disbursements (Bar Chart)
             </Typography>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={stats.collectionAnalytics}>
+                <BarChart data={stats.collectionAnalytics}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                   <XAxis dataKey="month" stroke="#94A3B8" fontSize={12} />
                   <YAxis stroke="#94A3B8" fontSize={12} tickFormatter={(val) => `₹${val/1000}k`} />
                   <ChartTooltip 
-                    formatter={(val) => [formatCurrency(val), 'Collected']}
+                    formatter={(val) => [formatCurrency(val)]}
                     contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                   />
-                  <Line type="monotone" dataKey="amount" stroke="#1E40AF" strokeWidth={3} activeDot={{ r: 8 }} />
-                </LineChart>
+                  <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '10px' }} />
+                  <Bar dataKey="collections" fill="#10B981" name="Collections" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="payouts" fill="#EF4444" name="Disbursements (Payouts)" radius={[4, 4, 0, 0]} />
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </Card>
@@ -270,7 +294,7 @@ export default function DashboardPage() {
 
         {/* Pie Chart */}
         <Grid item xs={12} md={4}>
-          <Card className="p-6 bg-white dark:bg-[#1E293B] border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
+          <Card className="p-6 bg-white dark:bg-[#1E293B] border border-slate-100 dark:border-slate-800 flex flex-col justify-between h-full">
             <div>
               <Typography variant="h6" className="font-bold mb-4 text-slate-800 dark:text-white">
                 Payment Status Breakdown
@@ -308,6 +332,70 @@ export default function DashboardPage() {
                   <span className="text-sm font-bold text-slate-800 dark:text-white">{item.value}%</span>
                 </div>
               ))}
+            </div>
+          </Card>
+        </Grid>
+
+        {/* Loan Interest Earnings Area Chart */}
+        <Grid item xs={12} md={8}>
+          <Card className="p-6 bg-white dark:bg-[#1E293B] border border-slate-100 dark:border-slate-800">
+            <Typography variant="h6" className="font-bold mb-4 text-slate-800 dark:text-white">
+              Interest Revenue Trend (Area Chart)
+            </Typography>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={stats.collectionAnalytics}>
+                  <defs>
+                    <linearGradient id="colorInterest" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                  <XAxis dataKey="month" stroke="#94A3B8" fontSize={12} />
+                  <YAxis stroke="#94A3B8" fontSize={12} tickFormatter={(val) => `₹${val/1000}k`} />
+                  <ChartTooltip 
+                    formatter={(val) => [formatCurrency(val)]}
+                    contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', paddingTop: '10px' }} />
+                  <Area type="monotone" dataKey="interest" stroke="#8B5CF6" fillOpacity={1} fill="url(#colorInterest)" name="Accrued Interest Earnings" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </Grid>
+
+        {/* Quick stats cards */}
+        <Grid item xs={12} md={4}>
+          <Card className="p-6 bg-white dark:bg-[#1E293B] border border-slate-100 dark:border-slate-800 h-full flex flex-col justify-between">
+            <div>
+              <Typography variant="h6" className="font-bold mb-4 text-slate-800 dark:text-white">
+                Business Accrual Summary
+              </Typography>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Disbursed</span>
+                  <span className="font-bold text-red-500 text-sm">
+                    {formatCurrency(stats.collectionAnalytics.reduce((s, r) => s + r.payouts, 0))}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Collected</span>
+                  <span className="font-bold text-[#10B981] text-sm">
+                    {formatCurrency(stats.collectionAnalytics.reduce((s, r) => s + r.collections, 0))}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Net Interest Yield</span>
+                  <span className="font-bold text-purple-500 text-sm">
+                    {formatCurrency(stats.collectionAnalytics.reduce((s, r) => s + r.interest, 0))}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="text-[10px] text-slate-400 font-semibold mt-4">
+              * Totals calculated across the active year cycle.
             </div>
           </Card>
         </Grid>

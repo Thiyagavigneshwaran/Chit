@@ -38,27 +38,61 @@ router.get('/stats', authenticateJWT, resolveTenant, async (req, res) => {
        ORDER BY MONTH(payment_date) ASC`
     );
 
+    // Build payouts monthly aggregates
+    const [monthlyPayoutsAgg] = await tenantDb.query(
+      `SELECT DATE_FORMAT(payment_date, '%b') as month, SUM(amount) as amount 
+       FROM payments 
+       GROUP BY DATE_FORMAT(payment_date, '%b'), MONTH(payment_date)
+       ORDER BY MONTH(payment_date) ASC`
+    );
+
+    // Build loan interest earnings aggregates
+    const [monthlyInterestAgg] = await tenantDb.query(
+      `SELECT DATE_FORMAT(payment_date, '%b') as month, SUM(interest_paid) as amount 
+       FROM loan_repayments 
+       GROUP BY DATE_FORMAT(payment_date, '%b'), MONTH(payment_date)
+       ORDER BY MONTH(payment_date) ASC`
+    );
+
     const baseMonths = {
-      'Jan': 0,
-      'Feb': 0,
-      'Mar': 0,
-      'Apr': 0,
-      'May': 0,
-      'Jun': 0
+      'Jan': { collections: 0, payouts: 0, interest: 0 },
+      'Feb': { collections: 0, payouts: 0, interest: 0 },
+      'Mar': { collections: 0, payouts: 0, interest: 0 },
+      'Apr': { collections: 0, payouts: 0, interest: 0 },
+      'May': { collections: 0, payouts: 0, interest: 0 },
+      'Jun': { collections: 0, payouts: 0, interest: 0 }
     };
 
-    // Merge actual collection data into standard monthly aggregates
+    // Merge actual data into standard monthly aggregates
     if (monthlyAgg && monthlyAgg.length > 0) {
       monthlyAgg.forEach(row => {
         if (baseMonths[row.month] !== undefined) {
-          baseMonths[row.month] = parseFloat(row.amount);
+          baseMonths[row.month].collections = parseFloat(row.amount) || 0;
+        }
+      });
+    }
+
+    if (monthlyPayoutsAgg && monthlyPayoutsAgg.length > 0) {
+      monthlyPayoutsAgg.forEach(row => {
+        if (baseMonths[row.month] !== undefined) {
+          baseMonths[row.month].payouts = parseFloat(row.amount) || 0;
+        }
+      });
+    }
+
+    if (monthlyInterestAgg && monthlyInterestAgg.length > 0) {
+      monthlyInterestAgg.forEach(row => {
+        if (baseMonths[row.month] !== undefined) {
+          baseMonths[row.month].interest = parseFloat(row.amount) || 0;
         }
       });
     }
 
     const collectionAnalytics = Object.keys(baseMonths).map(month => ({
       month,
-      amount: baseMonths[month]
+      collections: baseMonths[month].collections,
+      payouts: baseMonths[month].payouts,
+      interest: baseMonths[month].interest
     }));
 
     // Calculate percentage breakdown for Payment Status Pie Chart

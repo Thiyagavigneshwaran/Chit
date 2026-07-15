@@ -3,7 +3,8 @@ import { Drawer, Box, Typography, List, ListItem, ListItemButton, ListItemIcon, 
 import { 
   Dashboard, People, Layers, AccountBalanceWallet, Gavel, 
   Payment, Assessment, BarChart, Notifications, Settings,
-  AssignmentTurnedIn, MonetizationOn
+  AssignmentTurnedIn, MonetizationOn,
+  ReceiptLong
 } from '@mui/icons-material';
 import { AuthContext } from '../App';
 
@@ -11,7 +12,7 @@ export default function Sidebar() {
   const { user, activeTab, setActiveTab, mobileOpen, setMobileOpen, submenuOpen, setSubmenuOpen } = useContext(AuthContext);
 
   // Groupings & active item resolutions
-  const hasSubmenu = ['Customers', 'Chit Groups', 'Chit Entry', 'Auctions', 'Payments', 'Notifications', 'Settings'].includes(activeTab);
+  const hasSubmenu = ['Customers', 'Collections', 'Chit Groups', 'Chit Entry', 'Auctions', 'Payments', 'Notifications', 'Settings'].includes(activeTab);
   const currentDrawerWidth = (hasSubmenu && submenuOpen) ? 252 : 72;
 
   const mainMenuItems = [
@@ -22,6 +23,7 @@ export default function Sidebar() {
       icon: <Layers />, 
       subItems: [
         { text: 'Customers', icon: <People /> },
+        { text: 'Collections', icon: <ReceiptLong /> },
         { text: 'Chit Groups', icon: <Layers /> },
         { text: 'Chit Entry', icon: <AssignmentTurnedIn /> },
         { text: 'Auctions', icon: <Gavel /> },
@@ -47,7 +49,7 @@ export default function Sidebar() {
   // Detect which main menu item is currently active
   const getActiveMainItemId = () => {
     if (activeTab === 'Dashboard') return 'dashboard';
-    if (['Customers', 'Chit Groups', 'Chit Entry', 'Auctions', 'Payments'].includes(activeTab)) return 'chit';
+    if (['Customers', 'Collections', 'Chit Groups', 'Chit Entry', 'Auctions', 'Payments'].includes(activeTab)) return 'chit';
     if (activeTab === 'Finance') return 'finance';
     if (activeTab === 'Reports') return 'reports';
     if (activeTab === 'Analytics') return 'analytics';

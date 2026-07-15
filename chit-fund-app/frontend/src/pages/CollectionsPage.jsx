@@ -1,16 +1,20 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Card, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, IconButton, TextField, InputAdornment, Button, CircularProgress, Alert, Snackbar, Tooltip, Chip } from '@mui/material';
-import { Download, Search, ReceiptLong, CalendarMonth, FilterList } from '@mui/icons-material';
+import { Card, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, IconButton, TextField, InputAdornment, Button, CircularProgress, Alert, Snackbar, Tooltip, Chip, Grid, Drawer } from '@mui/material';
+import { Download, Search, ReceiptLong, CalendarMonth, FilterList, Close } from '@mui/icons-material';
 import axios from 'axios';
 import { jsPDF } from 'jspdf';
 import { AuthContext } from '../App';
 import CustomGrid from '../components/CustomGrid';
 
 export default function CollectionsPage() {
-  const { user } = useContext(AuthContext);
+  const { user } = useContext(AuthContext); 
   const [collections, setCollections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [methodFilter, setMethodFilter] = useState('All');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   const fetchCollections = async () => {
@@ -137,12 +141,43 @@ export default function CollectionsPage() {
     }
   };
 
-  // Search filter
-  const filteredCollections = collections.filter(c => {
-    return c.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-           c.receipt_no.toLowerCase().includes(searchTerm.toLowerCase()) || 
-           c.chit_group_id.toLowerCase().includes(searchTerm.toLowerCase());
-  });
+  // Dynamic filter query
+  const getFilteredCollections = () => {
+    let filtered = [...collections];
+    
+    // 1. Search term filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(c => {
+        const custName = c.customer_name ? c.customer_name.toLowerCase() : '';
+        const recNo = c.receipt_no ? c.receipt_no.toLowerCase() : '';
+        const grpId = c.chit_group_id ? c.chit_group_id.toLowerCase() : '';
+        return custName.includes(term) || recNo.includes(term) || grpId.includes(term);
+      });
+    }
+
+    // 2. Payment Method filter
+    if (methodFilter !== 'All') {
+      filtered = filtered.filter(c => c.payment_method === methodFilter);
+    }
+
+    // 3. Date range filters
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0,0,0,0);
+      filtered = filtered.filter(c => new Date(c.payment_date) >= start);
+    }
+
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23,59,59,999);
+      filtered = filtered.filter(c => new Date(c.payment_date) <= end);
+    }
+
+    return filtered;
+  };
+
+  const filteredCollections = getFilteredCollections();
 
   const columns = [
     { id: 'receipt_no', label: 'Receipt ID', render: (row) => <span className="font-bold text-xs text-slate-600 dark:text-slate-400">{row.receipt_no}</span> },
@@ -214,11 +249,108 @@ export default function CollectionsPage() {
           <Button
             variant="outlined"
             startIcon={<FilterList />}
-            className="border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-xl font-bold py-2 px-4 text-xs h-[38px] cursor-pointer"
+            onClick={() => setFilterDrawerOpen(true)}
+            className={`border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-xl font-bold py-2 px-4 text-xs h-[38px] cursor-pointer transition-colors relative ${
+              (methodFilter !== 'All' || startDate || endDate) ? 'border-[#1E40AF] text-[#1E40AF] dark:text-[#3B82F6] bg-[#1E40AF]/5' : ''
+            }`}
           >
-            Filters
+            Filters {(methodFilter !== 'All' || startDate || endDate) && '•'}
           </Button>
         </div>
+
+        {/* Right-side Sliding Filter Drawer */}
+        <Drawer
+          anchor="right"
+          open={filterDrawerOpen}
+          onClose={() => setFilterDrawerOpen(false)}
+          PaperProps={{
+            className: 'w-full sm:w-[360px] p-6 bg-white dark:bg-[#0F172A] border-l border-slate-100 dark:border-slate-800 flex flex-col justify-between'
+          }}
+          sx={{ zIndex: 1400 }}
+        >
+          <div>
+            {/* Drawer Header */}
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800 mb-6">
+              <Typography variant="subtitle2" className="font-extrabold text-slate-850 dark:text-white uppercase tracking-wider text-xs">
+                Filters
+              </Typography>
+              <div className="flex items-center gap-2">
+                {(methodFilter !== 'All' || startDate || endDate) && (
+                  <Button 
+                    size="small" 
+                    onClick={() => {
+                      setMethodFilter('All');
+                      setStartDate('');
+                      setEndDate('');
+                    }}
+                    className="text-[10px] text-slate-400 font-bold hover:text-slate-600 dark:hover:text-slate-200 normal-case min-w-0 p-0"
+                  >
+                    Clear All
+                  </Button>
+                )}
+                <IconButton 
+                  onClick={() => setFilterDrawerOpen(false)} 
+                  size="small" 
+                  className="bg-red-50 hover:bg-red-100 dark:bg-red-950/20 text-red-500 rounded-xl"
+                >
+                  <Close fontSize="small" />
+                </IconButton>
+              </div>
+            </div>
+
+            {/* Filter Options Form */}
+            <div className="space-y-6">
+              {/* Payment Method */}
+              <div className="space-y-1.5">
+                <span className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">Payment Method</span>
+                <select
+                  value={methodFilter}
+                  onChange={(e) => setMethodFilter(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1E40AF] focus:border-transparent font-semibold text-xs h-[38px]"
+                >
+                  <option value="All">All Methods</option>
+                  <option value="UPI">UPI</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                </select>
+              </div>
+
+              {/* From Date */}
+              <div className="space-y-1.5">
+                <span className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">From Date</span>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1E40AF] focus:border-transparent font-semibold text-xs h-[38px]"
+                />
+              </div>
+
+              {/* To Date */}
+              <div className="space-y-1.5">
+                <span className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">To Date</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1E40AF] focus:border-transparent font-semibold text-xs h-[38px]"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Drawer Actions */}
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-6">
+            <Button
+              fullWidth
+              variant="contained"
+              onClick={() => setFilterDrawerOpen(false)}
+              className="bg-[#1E40AF] hover:bg-[#1D4ED8] text-white py-2.5 rounded-xl font-bold text-xs shadow-md normal-case"
+            >
+              Apply Filters
+            </Button>
+          </div>
+        </Drawer>
 
         <CustomGrid
           columns={columns}
