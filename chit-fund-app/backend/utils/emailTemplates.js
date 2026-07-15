@@ -16,6 +16,7 @@ export const buildAdminSummaryEmail = (group, members, crossEnrollments = {}) =>
       <tr style="background:${idx % 2 === 0 ? '#F8FAFC' : '#FFFFFF'};">
         <td style="padding:10px 8px;border-bottom:1px solid #E2E8F0;font-weight:700;color:#1E40AF;text-align:center;">${idx + 1}</td>
         <td style="padding:10px 8px;border-bottom:1px solid #E2E8F0;font-weight:600;color:#1E293B;">${m.name}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #E2E8F0;color:#475569;font-size:12px;white-space:nowrap;">${m.customer_code || '—'}</td>
         <td style="padding:10px 8px;border-bottom:1px solid #E2E8F0;color:#475569;font-size:12px;white-space:nowrap;">${m.mobile || '—'}</td>
         <td style="padding:10px 8px;border-bottom:1px solid #E2E8F0;color:#475569;font-size:12px;word-break:break-all;">${m.email || '—'}</td>
         <td style="padding:10px 8px;border-bottom:1px solid #E2E8F0;font-size:11px;">${crossFlag}</td>
@@ -48,7 +49,7 @@ export const buildAdminSummaryEmail = (group, members, crossEnrollments = {}) =>
                     </div>
                   </td>
                   <td valign="middle" style="padding-left:10px;">
-                    <div style="color:#F59E0B;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;font-family:sans-serif;">Royal Chit Fund Services</div>
+                    <div style="color:#F59E0B;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;font-family:sans-serif;">Sri Vinayaga Chit Funds</div>
                     <div style="color:#FFFFFF;font-size:18px;font-weight:800;margin-top:2px;font-family:sans-serif;">Group Enrollment Summary</div>
                   </td>
                 </tr>
@@ -110,6 +111,7 @@ export const buildAdminSummaryEmail = (group, members, crossEnrollments = {}) =>
                       <tr style="background:#1E40AF;">
                         <th width="35" style="padding:10px 8px;text-align:center;color:#FFFFFF;font-weight:700;font-size:10px;letter-spacing:0.5px;">#</th>
                         <th style="padding:10px 8px;text-align:left;color:#FFFFFF;font-weight:700;font-size:10px;letter-spacing:0.5px;">Member Name</th>
+                        <th width="80" style="padding:10px 8px;text-align:left;color:#FFFFFF;font-weight:700;font-size:10px;letter-spacing:0.5px;">Member ID</th>
                         <th width="90" style="padding:10px 8px;text-align:left;color:#FFFFFF;font-weight:700;font-size:10px;letter-spacing:0.5px;">Mobile</th>
                         <th width="120" style="padding:10px 8px;text-align:left;color:#FFFFFF;font-weight:700;font-size:10px;letter-spacing:0.5px;">Email</th>
                         <th style="padding:10px 8px;text-align:left;color:#FFFFFF;font-weight:700;font-size:10px;letter-spacing:0.5px;">Other Groups</th>
@@ -134,7 +136,7 @@ export const buildAdminSummaryEmail = (group, members, crossEnrollments = {}) =>
           <tr>
             <td style="background:#F8FAFC;padding:20px;border-top:1px solid #E2E8F0;text-align:center;">
               <div style="font-size:10px;color:#94A3B8;font-family:sans-serif;">Generated on ${new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</div>
-              <div style="font-size:10px;color:#94A3B8;margin-top:4px;font-family:sans-serif;line-height:1.4;">This is a system-generated email from <strong>FinCore Chit Fund Management System</strong>.</div>
+              <div style="font-size:10px;color:#94A3B8;margin-top:4px;font-family:sans-serif;line-height:1.4;">This is a system-generated email from <strong>Sri Vinayaga Chit Fund Management System</strong>.</div>
             </td>
           </tr>
 
@@ -170,7 +172,7 @@ export const buildMemberWelcomeEmail = (member, group) => {
       <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:12px;display:inline-block;border:1px solid rgba(255,255,255,0.2);margin-bottom:16px;">
         <div style="width:48px;height:48px;background:linear-gradient(135deg,#D97706,#F59E0B);border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;color:#fff;">VK</div>
       </div>
-      <div style="color:#F59E0B;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Royal Chit Fund Services</div>
+      <div style="color:#F59E0B;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Sri Vinayaga Chit Funds</div>
       <div style="color:#FFFFFF;font-size:26px;font-weight:800;margin-top:8px;">Welcome, ${member.name}! 🎉</div>
       <div style="color:#93C5FD;font-size:14px;margin-top:6px;">You have been successfully enrolled in a Chit Group.</div>
     </div>
@@ -182,7 +184,11 @@ export const buildMemberWelcomeEmail = (member, group) => {
         
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <tr>
-            <td style="padding:8px 0;color:#64748B;font-weight:600;width:55%;">Group Name</td>
+            <td style="padding:8px 0;color:#64748B;font-weight:600;width:55%;">Customer ID</td>
+            <td style="padding:8px 0;color:#1E40AF;font-weight:800;">${member.customer_code || '—'}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;color:#64748B;font-weight:600;border-top:1px dashed #E2E8F0;">Group Name</td>
             <td style="padding:8px 0;color:#1E293B;font-weight:800;">${group.name}</td>
           </tr>
           <tr>
@@ -218,7 +224,7 @@ export const buildMemberWelcomeEmail = (member, group) => {
 
     <!-- Footer -->
     <div style="background:#F8FAFC;padding:20px 36px;border-top:1px solid #E2E8F0;text-align:center;">
-      <div style="font-size:12px;color:#1E40AF;font-weight:700;">Royal Chit Fund Services</div>
+      <div style="font-size:12px;color:#1E40AF;font-weight:700;">Sri Vinayaga Chit Funds</div>
       <div style="font-size:11px;color:#94A3B8;margin-top:4px;">For any queries, contact your chit fund manager directly.</div>
       <div style="font-size:11px;color:#94A3B8;margin-top:2px;">This is a system-generated email. Please do not reply.</div>
     </div>

@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- Seed Main Database
 INSERT INTO tenants (id, name, db_name) VALUES
-('tenant_1', 'Royal Chit Fund Services', 'chit_fund_tenant_1'),
+('tenant_1', 'Sri Vinayaga Chit Funds', 'chit_fund_tenant_1'),
 ('tenant_2', 'Premier Chit Group Ltd', 'chit_fund_tenant_2')
 ON DUPLICATE KEY UPDATE name=VALUES(name), db_name=VALUES(db_name);
 

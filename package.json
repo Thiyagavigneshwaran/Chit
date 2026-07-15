@@ -1,0 +1,16 @@
+{
+  "name": "fincore-chit-fund-desktop",
+  "version": "1.0.0",
+  "description": "Desktop Application for Sri Vinayaga Chit Fund Management System",
+  "main": "main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "build:frontend": "npm run build --prefix chit-fund-app/frontend",
+    "dist": "npm run build:frontend && electron-packager . FincoreChitFund --platform=win32 --arch=x64 --icon=logo.ico --overwrite --out=dist-electron --ignore=\"/\\.git\" --ignore=\"/dist-electron\" --ignore=\"/chit-fund-app/frontend/node_modules\" --ignore=\"/chit-fund-app/frontend/src\""
+  },
+  "devDependencies": {
+    "electron": "^28.2.0",
+    "electron-packager": "^17.1.2"
+  }
+}

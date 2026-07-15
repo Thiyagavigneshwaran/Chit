@@ -124,7 +124,7 @@ export const initDb = async () => {
     // Seed tenants
     await connection.query(`
       INSERT INTO tenants (id, name, db_name) VALUES
-      ('tenant_1', 'Royal Chit Fund Services', 'chit_fund_tenant_1'),
+      ('tenant_1', 'Sri Vinayaga Chit Funds', 'chit_fund_tenant_1'),
       ('tenant_2', 'Premier Chit Group Ltd', 'chit_fund_tenant_2')
       ON DUPLICATE KEY UPDATE name=VALUES(name), db_name=VALUES(db_name)
     `);
@@ -147,7 +147,7 @@ export const initDb = async () => {
     // Seed Tenant 1 Notifications
     await connection.query(`
       INSERT INTO notifications (id, title, message, created_date, is_read, type) VALUES
-      (1, 'Welcome to Royal Chit Fund Services', 'Your multi-tenant account is set up and active.', DATE_SUB(NOW(), INTERVAL 10 DAY), 1, 'success')
+      (1, 'Welcome to Sri Vinayaga Chit Funds', 'Your multi-tenant account is set up and active.', DATE_SUB(NOW(), INTERVAL 10 DAY), 1, 'success')
       ON DUPLICATE KEY UPDATE title=VALUES(title), message=VALUES(message)
     `);
 
@@ -183,7 +183,8 @@ const createTenantTables = async (connection) => {
       paid_amount DECIMAL(15,2) DEFAULT 0.00,
       pending_amount DECIMAL(15,2) DEFAULT 0.00,
       status VARCHAR(20) DEFAULT 'Paid',
-      auto_reminder BOOLEAN DEFAULT TRUE
+      auto_reminder BOOLEAN DEFAULT TRUE,
+      customer_code VARCHAR(50) UNIQUE
     )
   `);
 
@@ -329,6 +330,23 @@ const createTenantTables = async (connection) => {
     await connection.query('ALTER TABLE customers ADD COLUMN auto_reminder BOOLEAN DEFAULT TRUE');
   } catch (err) {
     // Ignore duplicate column or connection errors
+  }
+
+  try {
+    await connection.query('ALTER TABLE customers ADD COLUMN customer_code VARCHAR(50) UNIQUE');
+  } catch (err) {
+    // Ignore duplicate column or connection errors
+  }
+
+  // Backfill existing customers without a customer_code
+  try {
+    const [customers] = await connection.query('SELECT id FROM customers WHERE customer_code IS NULL OR customer_code = ""');
+    for (const c of customers) {
+      const code = `CUST-${String(c.id).padStart(4, '0')}`;
+      await connection.query('UPDATE customers SET customer_code = ? WHERE id = ?', [code, c.id]);
+    }
+  } catch (err) {
+    console.error('Failed to backfill customer codes:', err.message);
   }
 
   // Seed default templates

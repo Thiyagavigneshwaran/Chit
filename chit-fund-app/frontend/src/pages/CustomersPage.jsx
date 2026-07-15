@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Card, Grid, Typography, Chip, Button, IconButton, TextField, InputAdornment, List, ListItem, ListItemAvatar, ListItemText, Avatar, Divider, Switch, FormControlLabel, CircularProgress, Alert, Snackbar, Paper, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
-import { 
-  Search, NotificationsActive, 
-  ArrowForward, ContactPhone, MailOutline, Layers, 
+import {
+  Search, NotificationsActive,
+  ArrowForward, ContactPhone, MailOutline, Layers,
   CheckCircle, Warning, Help, Add, Download
 } from '@mui/icons-material';
 import axios from 'axios';
@@ -61,12 +61,12 @@ export default function CustomersPage() {
   const [customerDetail, setCustomerDetail] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
-  
+
   // Simulated Notification states
   const [autoReminder, setAutoReminder] = useState(true);
   const [sendingReminder, setSendingReminder] = useState(null); // 'whatsapp' or 'sms' or null
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  
+
   // Registration Modal States
   const [chitGroups, setChitGroups] = useState([]);
   const [openModal, setOpenModal] = useState(false);
@@ -201,14 +201,15 @@ export default function CustomersPage() {
         if (y + heightNeeded > bottomMargin) {
           doc.addPage();
           pageContext.pageNo += 1;
-          
+
           // Next page mini-header
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(8);
           doc.setTextColor(148, 163, 184); // Slate 400
-          doc.text(`Customer Ledger Statement - ${customerName} (Client ID: #${clientId})`, 15, 12);
+          const clientCode = customerDetail.profile.customer_code || `#${clientId}`;
+          doc.text(`Customer Ledger Statement - ${customerName} (Customer ID: ${clientCode})`, 15, 12);
           doc.text(`Page ${pageContext.pageNo}`, 195, 12, { align: 'right' });
-          
+
           doc.setDrawColor(226, 232, 240); // Slate 200
           doc.setLineWidth(0.2);
           doc.line(15, 15, 195, 15);
@@ -253,11 +254,11 @@ export default function CustomersPage() {
         y = checkPageOverflow(y, headerHeight);
         doc.setFillColor(30, 64, 175); // Primary Deep Blue (1E40AF)
         doc.rect(15, y, 180, headerHeight, 'F');
-        
+
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8);
         doc.setTextColor(255, 255, 255); // White text
-        
+
         const padding = 2;
         let currentX = 15;
         headers.forEach((header, idx) => {
@@ -270,7 +271,7 @@ export default function CustomersPage() {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
         doc.setTextColor(71, 85, 105); // Slate 600
-        
+
         if (!rows || rows.length === 0) {
           y = checkPageOverflow(y, 7);
           doc.text("No records found.", 17, y + 4);
@@ -284,20 +285,20 @@ export default function CustomersPage() {
         rows.forEach((row, rowIndex) => {
           const rowHeight = 6.5;
           y = checkPageOverflow(y, rowHeight);
-          
+
           // Alternating row backgrounds
           if (rowIndex % 2 === 1) {
             doc.setFillColor(248, 250, 252); // Slate 50
             doc.rect(15, y, 180, rowHeight, 'F');
           }
-          
+
           currentX = 15;
           row.forEach((cell, cellIdx) => {
             const cleanCell = String(cell !== undefined && cell !== null ? cell : '');
             // Detect numeric right-alignment
             const header = headers[cellIdx] || '';
             const align = (header.includes('Amount') || header.includes('Contribution') || header.includes('Discount') || header.includes('Dividend') || header.includes('Capital') || header.includes('Dues') || header.includes('Value')) ? 'right' : 'left';
-            
+
             const textX = align === 'right' ? (currentX + colWidths[cellIdx] - padding) : (currentX + padding);
             doc.text(cleanCell, textX, y + rowHeight - 2.2, { align });
             currentX += colWidths[cellIdx];
@@ -327,13 +328,13 @@ export default function CustomersPage() {
       doc.setFontSize(16);
       doc.setTextColor(30, 64, 175);
       doc.text("FINCORE CHIT FUNDS", 15, y);
-      
+
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       doc.setTextColor(148, 163, 184); // Slate 400
       const generatedOn = `Generated on: ${new Date().toLocaleString('en-IN')}`;
       doc.text(generatedOn, 195, y - 2, { align: 'right' });
-      doc.text("Royal Chit Fund Services", 15, y + 4);
+      doc.text("Sri Vinayaga Chit Funds", 15, y + 4);
       y += 10;
 
       // Document Title
@@ -341,7 +342,7 @@ export default function CustomersPage() {
       doc.setFontSize(12);
       doc.setTextColor(30, 41, 59); // Slate 800
       doc.text("CUSTOMER LEDGER STATEMENT", 15, y);
-      
+
       // Divider line
       doc.setDrawColor(226, 232, 240); // Slate 200
       doc.setLineWidth(0.5);
@@ -361,22 +362,22 @@ export default function CustomersPage() {
       doc.text("Customer Profile Details", 18, y + 5.5);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(30, 41, 59); // Slate 800
-      
+
       doc.setFont('helvetica', 'normal');
-      doc.text("Client ID:", 18, y + 12);
+      doc.text("Customer ID:", 18, y + 12);
       doc.setFont('helvetica', 'bold');
-      doc.text(`#${clientId}`, 45, y + 12);
-      
+      doc.text(customerDetail.profile.customer_code || `#${clientId}`, 45, y + 12);
+
       doc.setFont('helvetica', 'normal');
       doc.text("Full Name:", 18, y + 18);
       doc.setFont('helvetica', 'bold');
       doc.text(customerName, 45, y + 18);
-      
+
       doc.setFont('helvetica', 'normal');
       doc.text("Mobile Contact:", 18, y + 24);
       doc.setFont('helvetica', 'bold');
       doc.text(`+91 ${customerDetail.profile.mobile}`, 45, y + 24);
-      
+
       doc.setFont('helvetica', 'normal');
       doc.text("Email Directory:", 18, y + 30);
       doc.setFont('helvetica', 'bold');
@@ -479,7 +480,8 @@ export default function CustomersPage() {
 
       // Save PDF
       const sanitizedName = customerName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      doc.save(`statement_${sanitizedName}_${clientId}.pdf`);
+      const statementFileId = customerDetail.profile.customer_code || clientId;
+      doc.save(`statement_${sanitizedName}_${statementFileId}.pdf`);
       showSnackbar(`Statement PDF downloaded successfully for ${customerName}!`, 'success');
     } catch (err) {
       console.error("PDF generation failed:", err);
@@ -497,9 +499,10 @@ export default function CustomersPage() {
 
   // Filtered List
   const filteredCustomers = customers.filter(c => {
-    const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          c.mobile.includes(searchTerm) || 
-                          c.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.mobile.includes(searchTerm) ||
+      (c.customer_code && c.customer_code.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      c.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterStatus === 'All' || c.status === filterStatus;
     return matchesSearch && matchesFilter;
   });
@@ -556,7 +559,7 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6">
-      
+
       <div className="flex justify-between items-center">
         <div>
           <Typography variant="h5" className="font-extrabold text-slate-800 dark:text-white">
@@ -577,7 +580,7 @@ export default function CustomersPage() {
       </div>
 
       <Grid container spacing={3}>
-        
+
         {/* Left Side: List of Customers */}
         <Grid item xs={12} md={5}>
           <Card className="p-5 bg-white dark:bg-[#1E293B] border border-slate-100 dark:border-slate-800 rounded-3xl flex flex-col h-[75vh] shadow-sm">
@@ -602,11 +605,10 @@ export default function CustomersPage() {
                     type="button"
                     key={status}
                     onClick={() => setFilterStatus(status)}
-                    className={`px-4 py-1.5 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all duration-200 cursor-pointer ${
-                      isActive
-                        ? 'bg-[#1E40AF] text-white shadow-sm shadow-[#1E40AF]/30'
-                        : 'bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
+                    className={`px-4 py-1.5 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all duration-200 cursor-pointer ${isActive
+                      ? 'bg-[#1E40AF] text-white shadow-sm shadow-[#1E40AF]/30'
+                      : 'bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
                   >
                     {status}
                   </button>
@@ -623,14 +625,13 @@ export default function CustomersPage() {
                   {filteredCustomers.map(c => {
                     const isSelected = selectedCustomer === c.id;
                     return (
-                      <div 
-                        key={c.id} 
+                      <div
+                        key={c.id}
                         onClick={() => handleSelectCustomer(c.id)}
-                        className={`p-3.5 rounded-2xl border cursor-pointer transition-all duration-200 flex justify-between items-center gap-3 ${
-                          isSelected 
-                            ? 'bg-gradient-to-r from-[#1E40AF]/10 to-[#10B981]/5 border-[#1E40AF]/30 dark:from-[#1E40AF]/15 dark:to-[#10B981]/5' 
-                            : 'bg-transparent border-slate-100 dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-800/30'
-                        }`}
+                        className={`p-3.5 rounded-2xl border cursor-pointer transition-all duration-200 flex justify-between items-center gap-3 ${isSelected
+                          ? 'bg-gradient-to-r from-[#1E40AF]/10 to-[#10B981]/5 border-[#1E40AF]/30 dark:from-[#1E40AF]/15 dark:to-[#10B981]/5'
+                          : 'bg-transparent border-slate-100 dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-800/30'
+                          }`}
                       >
                         <div className="flex items-center gap-3">
                           <Avatar className="bg-gradient-to-tr from-[#1E40AF] to-[#10B981] font-bold text-xs text-white w-10 h-10 shadow-sm">
@@ -638,7 +639,7 @@ export default function CustomersPage() {
                           </Avatar>
                           <div>
                             <div className="font-extrabold text-xs text-slate-800 dark:text-slate-200">{c.name}</div>
-                            <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-0.5">{c.mobile}</div>
+                            <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-0.5">{c.customer_code || 'No ID'} • {c.mobile}</div>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -662,7 +663,7 @@ export default function CustomersPage() {
             </Card>
           ) : customerDetail ? (
             <div className="p-6 bg-white dark:bg-[#1E293B] border border-slate-100 dark:border-slate-800 rounded-3xl h-[75vh] flex flex-col justify-between overflow-y-auto shadow-sm">
-              
+
               {/* Profile Card Summary Header */}
               <div>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
@@ -676,7 +677,9 @@ export default function CustomersPage() {
                       </Typography>
                       <div className="flex items-center gap-2 mt-1">
                         {getStatusChip(customerDetail.profile.status)}
-                        <span className="text-xs text-slate-400 font-semibold">Client ID: #{customerDetail.profile.id}</span>
+                        <span className="text-xs text-slate-400 font-semibold">Customer ID: {customerDetail.profile.customer_code || 'N/A'}</span>
+                        <span className="text-xs text-slate-300 font-semibold">|</span>
+                        <span className="text-xs text-slate-400 font-semibold">DB ID: #{customerDetail.profile.id}</span>
                       </div>
                     </div>
                   </div>
@@ -780,7 +783,7 @@ export default function CustomersPage() {
                         </div>
                       }
                     />
-                    
+
                     <div className="flex gap-2 w-full sm:w-auto">
                       <button
                         onClick={handleSendEmailReminder}

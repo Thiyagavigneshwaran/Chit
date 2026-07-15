@@ -153,6 +153,8 @@ router.post('/', authenticateJWT, resolveTenant, authorizeRoles('Super Admin', '
       [name, email, mobile]
     );
     const customerId = insertResult.insertId;
+    const customerCode = `CUST-${String(customerId).padStart(4, '0')}`;
+    await tenantDb.query('UPDATE customers SET customer_code = ? WHERE id = ?', [customerCode, customerId]);
 
     // 3. Create the customer-chit link
     const joinedDate = new Date().toISOString().split('T')[0];
@@ -172,7 +174,7 @@ router.post('/', authenticateJWT, resolveTenant, authorizeRoles('Super Admin', '
 
     // 5. SMTP Email Dispatch Simulation
     const subject = `Welcome to FinCore Chit Funds - Scheme Enrollment`;
-    const emailBody = `Dear ${name},\n\nWelcome to FinCore Chit Funds! You have successfully registered and enrolled in the Chit Plan '${group.name}' (${chitGroupId}).\n\nYour monthly installment contribution is INR ${monthlyContribution.toLocaleString('en-IN')}.\n\nThank you for choosing us.\n\nFinCore Security and Accounting System`;
+    const emailBody = `Dear ${name},\n\nWelcome to FinCore Chit Funds! You have successfully registered and enrolled in the Chit Plan '${group.name}' (${chitGroupId}).\n\nYour Customer ID is ${customerCode}.\n\nYour monthly installment contribution is INR ${monthlyContribution.toLocaleString('en-IN')}.\n\nThank you for choosing us.\n\nFinCore Security and Accounting System`;
     
     console.log('\n==================================================');
     console.log('SIMULATING OUTBOUND WELCOME EMAIL (SMTP TRANSMISSION):');
@@ -183,7 +185,7 @@ router.post('/', authenticateJWT, resolveTenant, authorizeRoles('Super Admin', '
     console.log('==================================================\n');
 
     // 6. Log email registration in system notifications log
-    const notificationMsg = `Customer ${name} successfully registered. Outbound welcome email template compiled and dispatched to ${email}. Subscribed Group: ${chitGroupId}.`;
+    const notificationMsg = `Customer ${name} (ID: ${customerCode}) successfully registered. Outbound welcome email template compiled and dispatched to ${email}. Subscribed Group: ${chitGroupId}.`;
     await tenantDb.query(
       'INSERT INTO notifications (title, message, is_read, type) VALUES (?, ?, FALSE, "success")',
       [`Customer Registered: ${name}`, notificationMsg]
@@ -191,7 +193,8 @@ router.post('/', authenticateJWT, resolveTenant, authorizeRoles('Super Admin', '
 
     res.status(201).json({
       message: 'Customer registered and enrolled in chit plan successfully!',
-      customerId
+      customerId,
+      customerCode
     });
   } catch (error) {
     console.error('Error registering customer:', error);

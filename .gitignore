@@ -22,6 +22,7 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 dist/
 build/
 out/
+dist-electron/
 
 # IDE/Editor configs
 .idea/

@@ -41,7 +41,7 @@ export const generateInstallmentPDF = (group, members = []) => {
       doc.fillColor('#FFFFFF')
         .font('Helvetica-Bold')
         .fontSize(18)
-        .text('ROYAL CHIT FUND SERVICES', 40, 20, { align: 'left' });
+        .text('Sri Vinayaga Chit Funds', 40, 20, { align: 'left' });
 
       doc.fillColor('#F59E0B')
         .font('Helvetica-Bold')
@@ -56,7 +56,7 @@ export const generateInstallmentPDF = (group, members = []) => {
       doc.fillColor('#FFFFFF')
         .font('Helvetica-Bold')
         .fontSize(9)
-        .text(`FinCore Chit Fund Management System`, 0, 64, { align: 'right', width: doc.page.width - 40 });
+        .text(`Sri Vinayaga Chit Fund Management System`, 0, 64, { align: 'right', width: doc.page.width - 40 });
 
       doc.moveDown(3.5);
 
@@ -102,24 +102,24 @@ export const generateInstallmentPDF = (group, members = []) => {
         const tblTop = doc.y;
         const colWidths = { no: 30, date: 72, actual: 75, paying: 75, bid: 75, repay: 75 };
         const colX = {
-          no:     40,
-          date:   40 + colWidths.no,
+          no: 40,
+          date: 40 + colWidths.no,
           actual: 40 + colWidths.no + colWidths.date,
           paying: 40 + colWidths.no + colWidths.date + colWidths.actual,
-          bid:    40 + colWidths.no + colWidths.date + colWidths.actual + colWidths.paying,
-          repay:  40 + colWidths.no + colWidths.date + colWidths.actual + colWidths.paying + colWidths.bid,
+          bid: 40 + colWidths.no + colWidths.date + colWidths.actual + colWidths.paying,
+          repay: 40 + colWidths.no + colWidths.date + colWidths.actual + colWidths.paying + colWidths.bid,
         };
         const rowH = 18;
 
         // Header row
         doc.rect(40, tblTop, doc.page.width - 80, rowH).fill('#1E40AF');
         doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(7.5);
-        doc.text('No.',        colX.no,     tblTop + 5, { width: colWidths.no,     align: 'center' });
-        doc.text('Due Date',   colX.date,   tblTop + 5, { width: colWidths.date,   align: 'center' });
+        doc.text('No.', colX.no, tblTop + 5, { width: colWidths.no, align: 'center' });
+        doc.text('Due Date', colX.date, tblTop + 5, { width: colWidths.date, align: 'center' });
         doc.text('Actual Amt', colX.actual, tblTop + 5, { width: colWidths.actual, align: 'right' });
         doc.text('Paying Amt', colX.paying, tblTop + 5, { width: colWidths.paying, align: 'right' });
-        doc.text('Bid Payout', colX.bid,    tblTop + 5, { width: colWidths.bid,    align: 'right' });
-        doc.text('Repayment',  colX.repay,  tblTop + 5, { width: colWidths.repay,  align: 'right' });
+        doc.text('Bid Payout', colX.bid, tblTop + 5, { width: colWidths.bid, align: 'right' });
+        doc.text('Repayment', colX.repay, tblTop + 5, { width: colWidths.repay, align: 'right' });
 
         let currentY = tblTop + rowH;
 
@@ -132,12 +132,12 @@ export const generateInstallmentPDF = (group, members = []) => {
             // Repeat header on new page
             doc.rect(40, currentY, doc.page.width - 80, rowH).fill('#1E40AF');
             doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(7.5);
-            doc.text('No.',        colX.no,     currentY + 5, { width: colWidths.no,     align: 'center' });
-            doc.text('Due Date',   colX.date,   currentY + 5, { width: colWidths.date,   align: 'center' });
+            doc.text('No.', colX.no, currentY + 5, { width: colWidths.no, align: 'center' });
+            doc.text('Due Date', colX.date, currentY + 5, { width: colWidths.date, align: 'center' });
             doc.text('Actual Amt', colX.actual, currentY + 5, { width: colWidths.actual, align: 'right' });
             doc.text('Paying Amt', colX.paying, currentY + 5, { width: colWidths.paying, align: 'right' });
-            doc.text('Bid Payout', colX.bid,    currentY + 5, { width: colWidths.bid,    align: 'right' });
-            doc.text('Repayment',  colX.repay,  currentY + 5, { width: colWidths.repay,  align: 'right' });
+            doc.text('Bid Payout', colX.bid, currentY + 5, { width: colWidths.bid, align: 'right' });
+            doc.text('Repayment', colX.repay, currentY + 5, { width: colWidths.repay, align: 'right' });
             currentY += rowH;
           }
 
@@ -145,9 +145,9 @@ export const generateInstallmentPDF = (group, members = []) => {
           doc.rect(40, currentY, doc.page.width - 80, rowH)
             .fill(isEven ? '#F8FAFC' : '#FFFFFF');
 
-          const actVal  = item.actualAmount  !== undefined ? item.actualAmount  : (item.amount || 0);
-          const payVal  = item.payingAmount  !== undefined ? item.payingAmount  : (item.amount || 0);
-          const bidVal  = item.bidAmount     !== undefined ? item.bidAmount     : 0;
+          const actVal = item.actualAmount !== undefined ? item.actualAmount : (item.amount || 0);
+          const payVal = item.payingAmount !== undefined ? item.payingAmount : (item.amount || 0);
+          const bidVal = item.bidAmount !== undefined ? item.bidAmount : 0;
           const repayVal = item.repaymentAmount !== undefined ? item.repaymentAmount : 0;
           const dateVal = item.dueDate
             ? new Date(item.dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -160,16 +160,16 @@ export const generateInstallmentPDF = (group, members = []) => {
             .text(dateVal, colX.date, currentY + 5, { width: colWidths.date, align: 'center' });
 
           doc.fillColor('#1E293B').font('Helvetica').fontSize(7.5)
-            .text(fmt(actVal),   colX.actual, currentY + 5, { width: colWidths.actual, align: 'right' });
+            .text(fmt(actVal), colX.actual, currentY + 5, { width: colWidths.actual, align: 'right' });
 
           doc.fillColor('#059669').font('Helvetica-Bold').fontSize(7.5)
-            .text(fmt(payVal),   colX.paying, currentY + 5, { width: colWidths.paying, align: 'right' });
+            .text(fmt(payVal), colX.paying, currentY + 5, { width: colWidths.paying, align: 'right' });
 
           doc.fillColor('#1E293B').font('Helvetica').fontSize(7.5)
-            .text(fmt(bidVal),   colX.bid,    currentY + 5, { width: colWidths.bid,    align: 'right' });
+            .text(fmt(bidVal), colX.bid, currentY + 5, { width: colWidths.bid, align: 'right' });
 
           doc.fillColor('#D97706').font('Helvetica').fontSize(7.5)
-            .text(fmt(repayVal), colX.repay,  currentY + 5, { width: colWidths.repay,  align: 'right' });
+            .text(fmt(repayVal), colX.repay, currentY + 5, { width: colWidths.repay, align: 'right' });
 
           // Row bottom border
           doc.moveTo(40, currentY + rowH)
@@ -185,14 +185,14 @@ export const generateInstallmentPDF = (group, members = []) => {
 
         // Summary totals row
         const totalPaying = schedule.reduce((s, r) => s + (parseFloat(r.payingAmount || r.amount) || 0), 0);
-        const totalBid    = schedule.reduce((s, r) => s + (parseFloat(r.bidAmount) || 0), 0);
+        const totalBid = schedule.reduce((s, r) => s + (parseFloat(r.bidAmount) || 0), 0);
 
         doc.y = currentY + 10;
         doc.rect(40, doc.y, doc.page.width - 80, 22).fill('#1E293B');
         doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(8)
           .text('TOTALS', colX.no, doc.y + 7, { width: colWidths.no + colWidths.date + colWidths.actual - 4 })
           .text(fmt(totalPaying), colX.paying, doc.y + 7, { width: colWidths.paying, align: 'right' })
-          .text(fmt(totalBid),    colX.bid,    doc.y + 7, { width: colWidths.bid,    align: 'right' });
+          .text(fmt(totalBid), colX.bid, doc.y + 7, { width: colWidths.bid, align: 'right' });
         doc.moveDown(2.5);
       }
 
@@ -215,10 +215,10 @@ export const generateInstallmentPDF = (group, members = []) => {
 
         doc.rect(40, mTblTop, doc.page.width - 80, mRowH).fill('#1E40AF');
         doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(7.5);
-        doc.text('#',      mColX.no,     mTblTop + 5, { width: mColW.no,     align: 'center' });
-        doc.text('Name',   mColX.name,   mTblTop + 5, { width: mColW.name });
+        doc.text('#', mColX.no, mTblTop + 5, { width: mColW.no, align: 'center' });
+        doc.text('Name', mColX.name, mTblTop + 5, { width: mColW.name });
         doc.text('Mobile', mColX.mobile, mTblTop + 5, { width: mColW.mobile });
-        doc.text('Email',  mColX.email,  mTblTop + 5, { width: mColW.email });
+        doc.text('Email', mColX.email, mTblTop + 5, { width: mColW.email });
 
         let mY = mTblTop + mRowH;
         members.forEach((m, idx) => {
@@ -231,9 +231,9 @@ export const generateInstallmentPDF = (group, members = []) => {
           doc.fillColor('#1E40AF').font('Helvetica-Bold').fontSize(7.5)
             .text(`${idx + 1}`, mColX.no, mY + 5, { width: mColW.no, align: 'center' });
           doc.fillColor('#1E293B').font('Helvetica').fontSize(7.5)
-            .text(m.name || '—',   mColX.name,   mY + 5, { width: mColW.name })
+            .text(m.name || '—', mColX.name, mY + 5, { width: mColW.name })
             .text(m.mobile || '—', mColX.mobile, mY + 5, { width: mColW.mobile })
-            .text(m.email || '—',  mColX.email,  mY + 5, { width: mColW.email });
+            .text(m.email || '—', mColX.email, mY + 5, { width: mColW.email });
 
           doc.moveTo(40, mY + mRowH).lineTo(doc.page.width - 40, mY + mRowH)
             .strokeColor('#E2E8F0').lineWidth(0.5).stroke();
@@ -252,11 +252,11 @@ export const generateInstallmentPDF = (group, members = []) => {
       doc.moveTo(0, footerY).lineTo(doc.page.width, footerY).strokeColor('#E2E8F0').lineWidth(1).stroke();
       doc.fillColor('#94A3B8').font('Helvetica-Oblique').fontSize(7.5)
         .text(
-          'This is a system-generated document from FinCore Chit Fund Management System. Please do not alter this document.',
+          'This is a system-generated document from Sri Vinayaga Chit Fund Management System. Please do not alter this document.',
           40, footerY + 10, { align: 'center', width: doc.page.width - 80 }
         );
       doc.fillColor('#1E40AF').font('Helvetica-Bold').fontSize(7.5)
-        .text('Royal Chit Fund Services', 40, footerY + 24, { align: 'center', width: doc.page.width - 80 });
+        .text('Sri Vinayaga Chit Funds', 40, footerY + 24, { align: 'center', width: doc.page.width - 80 });
 
       doc.end();
     } catch (err) {

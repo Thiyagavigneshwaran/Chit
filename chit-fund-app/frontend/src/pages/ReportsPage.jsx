@@ -567,6 +567,14 @@ export default function ReportsPage() {
 
   const columns = getReportColumns();
 
+  const isFinanceLog = selectedReport === 'finance' && financeSubReport === 'log';
+  const searchWidth = isFinanceLog ? 2 : 3;
+  const statusWidth = 3;
+  const methodWidth = isFinanceLog ? 2 : 3;
+  const financeTypeWidth = isFinanceLog ? 2 : 3;
+  const dateWidth = isFinanceLog ? 2 : 2;
+  const actionsWidth = isFinanceLog ? 2 : (selectedReport === 'customers' ? 6 : 2);
+
   return (
     <div className="space-y-6">
 
@@ -583,9 +591,9 @@ export default function ReportsPage() {
             <Grid item xs={12} sm={6} md={3} key={card.id}>
               <div
                 onClick={() => setSelectedReport(card.id)}
-                className={`p-5 rounded-3xl cursor-pointer bg-gradient-to-tr ${card.color} border transition-all duration-300 h-[190px] flex flex-col justify-between hover:shadow-md ${
+                className={`p-5 rounded-3xl cursor-pointer bg-gradient-to-tr ${card.color} border transition-[border-color,box-shadow,background-color] duration-200 h-[190px] flex flex-col justify-between hover:shadow-md ${
                   isSelected 
-                    ? 'border-[#1E40AF] ring-2 ring-[#1E40AF]/20 scale-[1.02] shadow-sm' 
+                    ? 'border-[#1E40AF] ring-2 ring-[#1E40AF]/20 shadow-sm' 
                     : `${card.border} border-slate-100 hover:border-slate-300 dark:hover:border-slate-700`
                 }`}
               >
@@ -622,7 +630,7 @@ export default function ReportsPage() {
         <Grid container spacing={2} className="mb-6 items-center">
           
           {/* 1. Keyword search input */}
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={12} sm={6} md={searchWidth}>
             <div className="space-y-1">
               <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Search Parameter</span>
               <div className="relative">
@@ -640,7 +648,7 @@ export default function ReportsPage() {
 
           {/* 2. Specific Report-based dropdowns */}
           {selectedReport === 'customers' && (
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={statusWidth}>
               <div className="space-y-1">
                 <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Filter By Status</span>
                 <select
@@ -658,7 +666,7 @@ export default function ReportsPage() {
           )}
 
           {(selectedReport === 'collections' || selectedReport === 'disbursements' || (selectedReport === 'finance' && financeSubReport === 'log')) && (
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={methodWidth}>
               <div className="space-y-1">
                 <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Payment Method</span>
                 <select
@@ -676,7 +684,7 @@ export default function ReportsPage() {
           )}
 
           {selectedReport === 'finance' && (
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={financeTypeWidth}>
               <div className="space-y-1">
                 <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Finance Report Type</span>
                 <select
@@ -695,7 +703,7 @@ export default function ReportsPage() {
           {/* 3. Date Filters (From/To) */}
           {selectedReport !== 'customers' && (
             <>
-              <Grid item xs={6} sm={3} md={2}>
+              <Grid item xs={6} sm={3} md={dateWidth}>
                 <div className="space-y-1">
                   <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 font-semibold">From Date</span>
                   <input
@@ -706,7 +714,7 @@ export default function ReportsPage() {
                   />
                 </div>
               </Grid>
-              <Grid item xs={6} sm={3} md={2}>
+              <Grid item xs={6} sm={3} md={dateWidth}>
                 <div className="space-y-1">
                   <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 font-semibold">To Date</span>
                   <input
@@ -721,7 +729,7 @@ export default function ReportsPage() {
           )}
 
           {/* 4. Actions: Download PDF, Print, CSV Export */}
-          <Grid item xs={12} md={selectedReport === 'customers' ? 6 : 2} className="flex gap-2 justify-end self-end mt-4 md:mt-0 ml-auto">
+          <Grid item xs={12} md={actionsWidth} className="flex gap-2 justify-end self-end mt-4 md:mt-0 ml-auto">
             <button
               onClick={() => generatePDFReport('download')}
               disabled={exporting !== null || loading}
@@ -755,7 +763,7 @@ export default function ReportsPage() {
 
         {/* Loading / Preview Table */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <div className="flex flex-col items-center justify-center min-h-[500px] py-16 gap-3">
             <CircularProgress size={40} className="text-[#1E40AF]" />
             <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Compiling Preview Data...</span>
           </div>

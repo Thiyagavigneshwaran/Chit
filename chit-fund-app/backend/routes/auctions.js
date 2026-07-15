@@ -54,7 +54,7 @@ router.post('/', authenticateJWT, resolveTenant, async (req, res) => {
     );
 
     // 5. Generate Payout Record automatically in payments table
-    const transactionRef = `TXN-AUC-${Date.now()}`;
+    const transactionRef = 'PENDING';
     await tenantDb.query(
       'INSERT INTO payments (customer_id, customer_name, chit_group_id, amount, payment_date, payment_method, transaction_ref, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [winningBidderId, customer.name, chitGroupId, payoutAmount, auctionDate, 'Bank Transfer', transactionRef, 'Chit Payout']

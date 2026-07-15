@@ -9,7 +9,7 @@ import {
   Menu as MenuIcon, Search, Notifications, Mail, AccountCircle,
   DarkMode, LightMode, Settings, Shield, Autorenew, CheckCircle,
   Delete, MailOutline, Info, Warning, Close, Groups, Layers,
-  ContactPhone, Wifi, Add
+  ContactPhone, Add
 } from '@mui/icons-material';
 import axios from 'axios';
 import { AuthContext } from '../App';
@@ -262,15 +262,7 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
               </IconButton>
             </Tooltip>
 
-            {/* Connection Status Button */}
-            <Tooltip title="Tenant Database Secured & Connected">
-              <IconButton 
-                size="small"
-                className="text-[#10B981] hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl"
-              >
-                <Wifi fontSize="small" style={{ fontSize: '1.1rem' }} />
-              </IconButton>
-            </Tooltip>
+
 
             {/* Notifications Bell */}
             <Tooltip title="Alerts Inbox">
@@ -314,6 +306,7 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
           anchorEl={profileAnchor}
           open={Boolean(profileAnchor)}
           onClose={handleClose}
+          disableScrollLock={true}
           transformOrigin={{ horizontal: 'right', vertical: 'top' }}
           anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
           PaperProps={{
@@ -334,6 +327,7 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
           anchorEl={roleAnchor}
           open={Boolean(roleAnchor)}
           onClose={handleClose}
+          disableScrollLock={true}
           transformOrigin={{ horizontal: 'right', vertical: 'top' }}
           anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
           PaperProps={{
@@ -360,6 +354,7 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
           open={Boolean(notificationsAnchor)}
           anchorEl={notificationsAnchor}
           onClose={handleClose}
+          disableScrollLock={true}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
           transformOrigin={{ vertical: 'top', horizontal: 'right' }}
           PaperProps={{
@@ -454,6 +449,7 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
           open={Boolean(messagesAnchor)}
           anchorEl={messagesAnchor}
           onClose={handleClose}
+          disableScrollLock={true}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
           transformOrigin={{ vertical: 'top', horizontal: 'right' }}
           PaperProps={{

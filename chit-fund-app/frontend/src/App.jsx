@@ -19,7 +19,7 @@ import FinancePage from './pages/FinancePage';
 import axios from 'axios';
 
 // Configure Axios Defaults
-axios.defaults.baseURL = ''; // Proxy will handle it
+axios.defaults.baseURL = window.location.protocol === 'file:' ? 'http://localhost:5000' : '';
 
 export const AuthContext = createContext(null);
 
@@ -60,7 +60,7 @@ export default function App() {
 
 
   const getTabFromPath = () => {
-    const path = window.location.pathname.replace('/', '').toLowerCase();
+    const path = window.location.hash.replace('#/', '').replace('#', '').toLowerCase();
     if (path === 'customers') return 'Customers';
 
     if (path === 'chit-groups' || path === 'chitgroups') return 'Chit Groups';
@@ -88,16 +88,17 @@ export default function App() {
     }
   }, [activeTab]);
 
-  // Sync URL pathname with activeTab
+  // Sync URL hash with activeTab
   useEffect(() => {
-    let pathName = '/' + activeTab.toLowerCase();
+    let pathName = activeTab.toLowerCase();
     if (activeTab === 'Chit Groups') {
-      pathName = '/chit-groups';
+      pathName = 'chit-groups';
     } else if (activeTab === 'Chit Entry') {
-      pathName = '/chit-entry';
+      pathName = 'chit-entry';
     }
-    if (window.location.pathname !== pathName) {
-      window.history.pushState(null, '', pathName);
+    const targetHash = '#/' + pathName;
+    if (window.location.hash !== targetHash) {
+      window.history.pushState(null, '', targetHash);
     }
   }, [activeTab]);
 
@@ -107,7 +108,11 @@ export default function App() {
       setActiveTab(getTabFromPath());
     };
     window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handlePopState);
+    };
   }, []);
 
   // Initialize Axios Auth Headers on token change

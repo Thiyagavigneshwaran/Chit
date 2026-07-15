@@ -207,7 +207,7 @@ router.post('/:id/notify-enrollment', authenticateJWT, resolveTenant, async (req
 
     // 2. Fetch all current members of this group
     const [members] = await tenantDb.query(`
-      SELECT c.id, c.name, c.email, c.mobile, cc.joined_date
+      SELECT c.id, c.customer_code, c.name, c.email, c.mobile, cc.joined_date
       FROM customers c
       JOIN customer_chits cc ON c.id = cc.customer_id
       WHERE cc.chit_group_id = ?
@@ -267,7 +267,8 @@ router.post('/:id/notify-enrollment', authenticateJWT, resolveTenant, async (req
         const result = await sendMail(
           member.email,
           `Welcome to ${group.name} — Your Chit Group Enrollment Confirmation`,
-          memberHtml
+          memberHtml,
+          pdfAttachment ? [pdfAttachment] : []
         );
         if (result.success) {
           memberEmailsSent++;

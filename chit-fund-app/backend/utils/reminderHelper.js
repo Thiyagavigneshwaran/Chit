@@ -74,7 +74,7 @@ export const sendCustomerReminderEmail = async (tenantDb, customerId) => {
     const emailHtmlBody = `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 25px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
         <h2 style="color: #1E40AF; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-top: 0; font-weight: 800;">Chit Installment Due Reminder</h2>
-        <p style="font-size: 14px; color: #334155;">Dear <strong>${customer.name}</strong>,</p>
+        <p style="font-size: 14px; color: #334155;">Dear <strong>${customer.name}</strong> (Customer ID: ${customer.customer_code || '—'}),</p>
         <p style="font-size: 14px; color: #334155; line-height: 1.5;">This is a reminder regarding your outstanding installment dues for your active chit groups. Below is a detailed summary of your current outstanding contributions:</p>
         
         <table style="width: 100%; border-collapse: collapse; margin-top: 20px; margin-bottom: 20px; font-size: 13px;">
@@ -99,7 +99,7 @@ export const sendCustomerReminderEmail = async (tenantDb, customerId) => {
         
         <div style="border-top: 1px solid #f1f5f9; padding-top: 15px; margin-top: 25px; font-size: 12px; color: #64748b; line-height: 1.4;">
           Regards,<br/>
-          <strong>Royal Chit Fund Services</strong>
+          <strong>Sri Vinayaga Chit Funds</strong>
         </div>
       </div>
     `;

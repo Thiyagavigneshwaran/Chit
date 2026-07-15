@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Card, Grid, Typography, Chip, Button, IconButton, TextField, CircularProgress, Alert, Snackbar, Paper, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemAvatar, ListItemText, Avatar, Drawer, Switch, FormControlLabel } from '@mui/material';
+import { Card, Grid, Typography, Chip, Button, IconButton, TextField, CircularProgress, Alert, Snackbar, Paper, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemAvatar, ListItemText, Avatar, Drawer, Switch, FormControlLabel, Autocomplete } from '@mui/material';
 import { Add, Search, Groups, CalendarMonth, CurrencyExchange, Close, ArrowBack } from '@mui/icons-material';
 import axios from 'axios';
 import { AuthContext } from '../App';
@@ -68,6 +68,9 @@ export default function ChitGroupsPage() {
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [enrollLoading, setEnrollLoading] = useState(false);
   const [notifyLoading, setNotifyLoading] = useState(false);
+  const [openRegisterModal, setOpenRegisterModal] = useState(false);
+  const [newCustomerData, setNewCustomerData] = useState({ name: '', email: '', mobile: '' });
+  const [registerLoading, setRegisterLoading] = useState(false);
 
   // Custom installment schedule states
   const [useCustomSchedule, setUseCustomSchedule] = useState(true); // Default to true since we have custom grid tables
@@ -474,6 +477,33 @@ export default function ChitGroupsPage() {
     }
   };
 
+  const handleRegisterAndEnroll = async (e) => {
+    e.preventDefault();
+    if (!newCustomerData.name || !newCustomerData.email || !newCustomerData.mobile) {
+      showSnackbar('Please fill in all registration fields.', 'warning');
+      return;
+    }
+    setRegisterLoading(true);
+    try {
+      const response = await axios.post('/api/customers', {
+        ...newCustomerData,
+        chitGroupId: selectedGroup.id
+      });
+      showSnackbar(response.data.message || 'Customer registered and enrolled successfully!', 'success');
+      setOpenRegisterModal(false);
+      setNewCustomerData({ name: '', email: '', mobile: '' });
+      
+      // Refresh customer list & group details in sidebar
+      await fetchCustomers();
+      await handleViewGroupDetails(selectedGroup);
+      await fetchGroups(); // update counts
+    } catch (err) {
+      showSnackbar(err.response?.data?.message || 'Failed to register and enroll customer.', 'error');
+    } finally {
+      setRegisterLoading(false);
+    }
+  };
+
   // React to search selections
   useEffect(() => {
     if (groups.length > 0 && searchSelectedGroupId) {
@@ -682,22 +712,23 @@ export default function ChitGroupsPage() {
         {selectedGroup && (
           <div className="space-y-6 h-full flex flex-col justify-between">
             <div>
-              <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex justify-between items-center pb-4 border-b border-slate-800/80">
                 <div>
-                  <span className="text-[10px] font-bold text-[#1E40AF] dark:text-[#3B82F6] uppercase tracking-widest">{selectedGroup.id}</span>
-                  <Typography variant="h6" className="font-extrabold text-slate-800 dark:text-white">{selectedGroup.name}</Typography>
+                  <span className="text-[10px] font-bold text-[#3B82F6] uppercase tracking-widest">{selectedGroup.id}</span>
+                  <Typography variant="h6" className="font-extrabold text-white" style={{ color: '#ffffff' }}>{selectedGroup.name}</Typography>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Button
                     onClick={() => handleOpenEditModal(selectedGroup)}
                     variant="outlined"
                     size="small"
-                    className="border-[#1E40AF] text-[#1E40AF] hover:bg-[#1E40AF]/5 font-bold px-3 py-1.5 rounded-xl text-[10px] h-[30px]"
+                    className="border-[#3B82F6] text-[#3B82F6] hover:bg-[#3B82F6]/10 font-bold px-3 py-1.5 rounded-xl text-[10px] h-[30px]"
+                    style={{ color: '#3B82F6', borderColor: '#3B82F6' }}
                   >
                     Edit
                   </Button>
-                  <IconButton onClick={() => setDrawerOpen(false)} size="small" className="text-slate-400">
-                    <Close />
+                  <IconButton onClick={() => setDrawerOpen(false)} size="small" className="text-slate-300 hover:text-white">
+                    <Close style={{ color: '#CBD5E1' }} />
                   </IconButton>
                 </div>
               </div>
@@ -787,27 +818,71 @@ export default function ChitGroupsPage() {
                 <Typography variant="subtitle2" className="text-slate-400 uppercase tracking-widest font-semibold text-xs">
                   Enroll Member
                 </Typography>
-                <div className="flex gap-2">
-                  <select
-                    value={selectedCustomerId}
-                    onChange={(e) => setSelectedCustomerId(e.target.value)}
-                    className="flex-1 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-750 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#1E40AF] text-xs font-semibold"
-                  >
-                    <option value="" className="text-slate-450 dark:text-slate-500">Select Customer</option>
-                    {customers.map(c => (
-                      <option key={c.id} value={c.id} className="text-slate-800 dark:text-white bg-white dark:bg-[#1E293B]">
-                        {c.name} (+91 {c.mobile})
-                      </option>
-                    ))}
-                  </select>
-                  <Button
-                    onClick={handleEnrollMember}
-                    disabled={enrollLoading || !selectedCustomerId}
-                    variant="contained"
-                    className="bg-[#1E40AF] hover:bg-[#1D4ED8] text-white font-bold px-4 py-2 rounded-xl text-xs disabled:opacity-50 shrink-0"
-                  >
-                    {enrollLoading ? 'Adding...' : 'Add'}
-                  </Button>
+                <div className="space-y-2">
+                  <div className="flex gap-2 items-center">
+                    <Autocomplete
+                      value={customers.find(c => c.id === parseInt(selectedCustomerId)) || null}
+                      onChange={(event, newValue) => {
+                        setSelectedCustomerId(newValue ? newValue.id.toString() : '');
+                      }}
+                      options={customers}
+                      getOptionLabel={(option) => `${option.name} (${option.customer_code || 'No ID'}) (+91 ${option.mobile})`}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          placeholder="Select Customer"
+                          variant="outlined"
+                          size="small"
+                          InputProps={{
+                            ...params.InputProps,
+                            className: 'text-white dark:text-white text-xs',
+                          }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              color: '#000000ff',
+                              fontSize: '0.75rem',
+                              '& fieldset': {
+                                borderColor: '#334155',
+                                borderRadius: '12px',
+                              },
+                              '&:hover fieldset': {
+                                borderColor: '#475569',
+                              },
+                              '&.Mui-focused fieldset': {
+                                borderColor: '#3B82F6',
+                              },
+                            },
+                            '& .MuiAutocomplete-popupIndicator': {
+                              color: '#94A3B8',
+                            },
+                            '& .MuiAutocomplete-clearIndicator': {
+                              color: '#94A3B8',
+                            },
+                          }}
+                        />
+                      )}
+                      className="flex-1"
+                    />
+                    <Button
+                      onClick={handleEnrollMember}
+                      disabled={enrollLoading || !selectedCustomerId}
+                      variant="contained"
+                      className="bg-[#1E40AF] hover:bg-[#1D4ED8] text-white font-bold px-4 py-2 rounded-xl text-xs disabled:opacity-50 shrink-0"
+                    >
+                      {enrollLoading ? 'Adding...' : 'Add'}
+                    </Button>
+                  </div>
+                  <div className="flex justify-between items-center text-xs pt-1">
+                    <span className="text-slate-400 font-semibold">Not registered yet?</span>
+                    <Button
+                      size="small"
+                      variant="text"
+                      onClick={() => setOpenRegisterModal(true)}
+                      className="text-xs text-[#1E40AF] dark:text-[#3B82F6] font-bold p-0 min-w-0 hover:underline normal-case"
+                    >
+                      + Register New Customer
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -1554,6 +1629,64 @@ export default function ChitGroupsPage() {
       </Card>
     </div>
   )}
+
+      {/* Inline Registration Dialog */}
+      <Dialog open={openRegisterModal} onClose={() => setOpenRegisterModal(false)} PaperProps={{ className: 'rounded-3xl p-4 w-full max-w-md bg-white dark:bg-[#1E293B]' }}>
+        <form onSubmit={handleRegisterAndEnroll}>
+          <DialogTitle className="font-extrabold text-slate-800 dark:text-white pb-1">Register & Enroll Customer</DialogTitle>
+          <Typography variant="caption" className="text-slate-450 px-6 block pb-4">
+            Register a new customer and enroll them directly in '{selectedGroup?.name || 'this group'}'.
+          </Typography>
+          <DialogContent className="space-y-4 pt-0">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Full Name</label>
+              <input
+                type="text"
+                required
+                placeholder="Enter customer name"
+                value={newCustomerData.name}
+                onChange={(e) => setNewCustomerData({ ...newCustomerData, name: e.target.value })}
+                className="w-full px-4 py-2.5 bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#1E40AF] focus:border-transparent transition-all font-medium text-sm"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Email Address</label>
+              <input
+                type="email"
+                required
+                placeholder="Enter email address"
+                value={newCustomerData.email}
+                onChange={(e) => setNewCustomerData({ ...newCustomerData, email: e.target.value })}
+                className="w-full px-4 py-2.5 bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#1E40AF] focus:border-transparent transition-all font-medium text-sm"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Mobile Contact</label>
+              <input
+                type="text"
+                required
+                placeholder="Enter 10-digit number"
+                value={newCustomerData.mobile}
+                onChange={(e) => setNewCustomerData({ ...newCustomerData, mobile: e.target.value })}
+                className="w-full px-4 py-2.5 bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#1E40AF] focus:border-transparent transition-all font-medium text-sm"
+              />
+            </div>
+          </DialogContent>
+          <DialogActions className="px-6 pb-4">
+            <Button onClick={() => setOpenRegisterModal(false)} className="text-slate-500 font-bold">Cancel</Button>
+            <Button
+              type="submit"
+              disabled={registerLoading}
+              variant="contained"
+              className="bg-[#1E40AF] text-white font-bold px-5 rounded-xl normal-case"
+            >
+              {registerLoading ? 'Registering...' : 'Register & Enroll'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
 
       {/* Toast Alert */}
       <Snackbar
