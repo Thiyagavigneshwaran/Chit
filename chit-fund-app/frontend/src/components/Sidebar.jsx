@@ -101,7 +101,7 @@ export default function Sidebar() {
           className="w-14 h-14 flex items-center justify-center mb-8 cursor-pointer hover:scale-105 transition-transform" 
           onClick={() => setActiveTab('Dashboard')}
         >
-          <img src="/logo.png" alt="VK Logo" className="w-12 h-12 object-contain" />
+          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="VK Logo" className="w-12 h-12 object-contain" />
         </div>
 
         {/* Icons Navigation List */}

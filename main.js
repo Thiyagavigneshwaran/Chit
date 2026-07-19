@@ -8,12 +8,20 @@ let backendProcess = null;
 function startBackend() {
   const backendPath = path.join(__dirname, 'chit-fund-app', 'backend', 'server.js');
   const cwd = path.join(__dirname, 'chit-fund-app', 'backend');
+  const backendCommand = app.isPackaged ? process.execPath : 'node';
+  const backendEnv = { ...process.env, PORT: '5000' };
+
+  // A packaged Electron app already includes a Node.js runtime. Use it so the
+  // client does not need a separate system-wide Node.js installation.
+  if (app.isPackaged) {
+    backendEnv.ELECTRON_RUN_AS_NODE = '1';
+  }
 
   console.log(`Starting Express backend server: ${backendPath}`);
   
-  backendProcess = spawn('node', [backendPath], {
+  backendProcess = spawn(backendCommand, [backendPath], {
     cwd: cwd,
-    env: { ...process.env, PORT: 5000 }
+    env: backendEnv
   });
 
   backendProcess.stdout.on('data', (data) => {
