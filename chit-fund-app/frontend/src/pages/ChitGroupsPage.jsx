@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Card, Grid, Typography, Chip, Button, IconButton, TextField, CircularProgress, Alert, Snackbar, Paper, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemAvatar, ListItemText, Avatar, Drawer, Switch, FormControlLabel, Autocomplete } from '@mui/material';
-import { Add, Search, Groups, CalendarMonth, CurrencyExchange, Close, ArrowBack } from '@mui/icons-material';
+import { Add, Search, Groups, CalendarMonth, CurrencyExchange, Close, ArrowBack, CheckCircle } from '@mui/icons-material';
 import axios from 'axios';
 import { AuthContext } from '../App';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer } from 'recharts';
+import CustomGrid from '../components/CustomGrid';
 
 const getCurrentContribution = (group, dateStr = new Date().toISOString().split('T')[0]) => {
   if (!group) return 0;
@@ -67,7 +68,38 @@ export default function ChitGroupsPage() {
   const [members, setMembers] = useState([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [activeView, setActiveView] = useState('list'); // 'list', 'create', 'edit'
+  const [activeView, setActiveView] = useState('list'); // 'list', 'create', 'edit', 'ledger'
+  
+  // Ledger View States
+  const [ledgerGroup, setLedgerGroup] = useState(null);
+  const [ledgerMembers, setLedgerMembers] = useState([]);
+  const [ledgerAuctions, setLedgerAuctions] = useState([]);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentData, setPaymentData] = useState({
+    customerId: '',
+    customerName: '',
+    amount: '',
+    paymentMethod: 'UPI',
+    paymentDate: new Date().toISOString().split('T')[0]
+  });
+  const [guaranteeDialogOpen, setGuaranteeDialogOpen] = useState(false);
+  const [guaranteeData, setGuaranteeData] = useState({
+    customerId: '',
+    customerName: '',
+    guarantorName: '',
+    guarantorMobile: ''
+  });
+  const [auctionDialogOpen, setAuctionDialogOpen] = useState(false);
+  const [auctionData, setAuctionData] = useState({
+    customerId: '',
+    customerName: '',
+    installmentNo: '',
+    bidAmount: ''
+  });
+  const [savingPayment, setSavingPayment] = useState(false);
+  const [savingGuarantee, setSavingGuarantee] = useState(false);
+  const [savingAuction, setSavingAuction] = useState(false);
   
   // Create Modal Scheme Mode States
   const [createSchemeMode, setCreateSchemeMode] = useState('default'); // 'default' or 'custom'
@@ -283,6 +315,227 @@ export default function ChitGroupsPage() {
     setCustomEditSchedule(nextSchedule);
   };
 
+  const handleOpenLedgerView = async (group) => {
+    setDrawerOpen(false);
+    setLedgerLoading(true);
+    setActiveView('ledger');
+    try {
+      const res = await axios.get(`/api/chits/${group.id}`);
+      setLedgerGroup(res.data.group);
+      setLedgerMembers(res.data.members || []);
+      setLedgerAuctions(res.data.auctions || []);
+    } catch (err) {
+      showSnackbar('Failed to load ledger details.', 'error');
+      setActiveView('list');
+    } finally {
+      setLedgerLoading(false);
+    }
+  };
+
+  const refreshLedger = async (groupId) => {
+    try {
+      const res = await axios.get(`/api/chits/${groupId}`);
+      setLedgerGroup(res.data.group);
+      setLedgerMembers(res.data.members || []);
+      setLedgerAuctions(res.data.auctions || []);
+    } catch (err) {
+      console.error('Failed to refresh ledger:', err);
+    }
+  };
+
+  const isInstallmentPaid = (member, installmentIdx) => {
+    let schedule = [];
+    if (ledgerGroup && ledgerGroup.installment_schedule) {
+      try {
+        schedule = typeof ledgerGroup.installment_schedule === 'string'
+          ? JSON.parse(ledgerGroup.installment_schedule)
+          : ledgerGroup.installment_schedule;
+      } catch (e) {
+        console.error('Failed to parse schedule:', e);
+      }
+    }
+    
+    const count = ledgerGroup ? parseInt(ledgerGroup.installments) || 0 : 0;
+    const monthly = ledgerGroup ? parseFloat(ledgerGroup.monthly_contribution) || 0 : 0;
+
+    if (!Array.isArray(schedule) || schedule.length === 0) {
+      const totalPaid = parseFloat(member.total_paid) || 0;
+      const requiredAmount = monthly * (installmentIdx + 1);
+      return totalPaid >= requiredAmount;
+    }
+    
+    let requiredAmount = 0;
+    for (let i = 0; i <= installmentIdx; i++) {
+      const row = schedule[i];
+      const amt = row ? (parseFloat(row.payingAmount || row.amount || row) || 0) : 0;
+      requiredAmount += amt;
+    }
+    
+    const totalPaid = parseFloat(member.total_paid) || 0;
+    return totalPaid >= requiredAmount;
+  };
+
+  const getLedgerSchedule = () => {
+    let schedule = [];
+    if (ledgerGroup && ledgerGroup.installment_schedule) {
+      try {
+        schedule = typeof ledgerGroup.installment_schedule === 'string'
+          ? JSON.parse(ledgerGroup.installment_schedule)
+          : ledgerGroup.installment_schedule;
+      } catch (e) {
+        console.error('Failed to parse schedule:', e);
+      }
+    }
+    const count = ledgerGroup ? parseInt(ledgerGroup.installments) || 0 : 0;
+    const monthly = ledgerGroup ? parseFloat(ledgerGroup.monthly_contribution) || 0 : 0;
+    
+    if (!Array.isArray(schedule) || schedule.length !== count) {
+      schedule = Array.from({ length: count }, (_, i) => {
+        const d = new Date(ledgerGroup.firstDueDate || new Date());
+        d.setMonth(d.getMonth() + i);
+        return {
+          month: i + 1,
+          payingAmount: monthly,
+          dueDate: d.toISOString().split('T')[0]
+        };
+      });
+    }
+    return schedule;
+  };
+
+  const handleCheckboxClick = (member, instIdx, isPaid, instAmount, instDueDate) => {
+    if (isPaid) {
+      showSnackbar(`${member.name} has already paid up to this installment. To modify payments, use the Collections page or manual payment history.`, 'info');
+    } else {
+      setPaymentData({
+        customerId: member.id.toString(),
+        customerName: member.name,
+        amount: instAmount.toString(),
+        paymentMethod: 'UPI',
+        paymentDate: instDueDate || new Date().toISOString().split('T')[0]
+      });
+      setPaymentDialogOpen(true);
+    }
+  };
+
+  const handleOpenManualPayment = (member) => {
+    setPaymentData({
+      customerId: member.id.toString(),
+      customerName: member.name,
+      amount: '',
+      paymentMethod: 'UPI',
+      paymentDate: new Date().toISOString().split('T')[0]
+    });
+    setPaymentDialogOpen(true);
+  };
+
+  const handleOpenGuaranteeDialog = (member) => {
+    setGuaranteeData({
+      customerId: member.id.toString(),
+      customerName: member.name,
+      guarantorName: member.guarantor_name || '',
+      guarantorMobile: member.guarantor_mobile || ''
+    });
+    setGuaranteeDialogOpen(true);
+  };
+
+  const handleSavePayment = async (e) => {
+    e.preventDefault();
+    if (!paymentData.customerId || !paymentData.amount || !paymentData.paymentMethod) {
+      showSnackbar('Please fill in all fields.', 'warning');
+      return;
+    }
+    setSavingPayment(true);
+    try {
+      const payload = {
+        customerId: parseInt(paymentData.customerId),
+        chitGroupId: ledgerGroup.id,
+        amount: parseFloat(paymentData.amount),
+        paymentMethod: paymentData.paymentMethod,
+        paymentDate: paymentData.paymentDate
+      };
+      await axios.post('/api/collections', payload);
+      showSnackbar('Payment entry recorded successfully!', 'success');
+      setPaymentDialogOpen(false);
+      await refreshLedger(ledgerGroup.id);
+      fetchGroups();
+    } catch (err) {
+      showSnackbar(err.response?.data?.message || 'Failed to record payment.', 'error');
+    } finally {
+      setSavingPayment(false);
+    }
+  };
+
+  const handleSaveGuarantee = async (e) => {
+    e.preventDefault();
+    if (!guaranteeData.customerId || !guaranteeData.guarantorName || !guaranteeData.guarantorMobile) {
+      showSnackbar('Please fill in all fields.', 'warning');
+      return;
+    }
+    setSavingGuarantee(true);
+    try {
+      const payload = {
+        customerId: parseInt(guaranteeData.customerId),
+        guarantorName: guaranteeData.guarantorName,
+        guarantorMobile: guaranteeData.guarantorMobile
+      };
+      await axios.post(`/api/chits/${ledgerGroup.id}/guarantee`, payload);
+      showSnackbar('Guarantor details saved successfully!', 'success');
+      setGuaranteeDialogOpen(false);
+      await refreshLedger(ledgerGroup.id);
+    } catch (err) {
+      showSnackbar(err.response?.data?.message || 'Failed to save guarantor details.', 'error');
+    } finally {
+      setSavingGuarantee(false);
+    }
+  };
+
+  const handleOpenAuctionDialog = (member) => {
+    const totalInstallments = ledgerGroup ? parseInt(ledgerGroup.installments) || 0 : 0;
+    const wonMonths = ledgerAuctions.map(a => a.installment_no);
+    let nextMonth = '';
+    for (let i = 1; i <= totalInstallments; i++) {
+      if (!wonMonths.includes(i)) {
+        nextMonth = i.toString();
+        break;
+      }
+    }
+
+    setAuctionData({
+      customerId: member.id.toString(),
+      customerName: member.name,
+      installmentNo: nextMonth,
+      bidAmount: ''
+    });
+    setAuctionDialogOpen(true);
+  };
+
+  const handleSaveAuction = async (e) => {
+    e.preventDefault();
+    if (!auctionData.customerId || !auctionData.installmentNo || !auctionData.bidAmount) {
+      showSnackbar('Please fill in all fields.', 'warning');
+      return;
+    }
+    setSavingAuction(true);
+    try {
+      const payload = {
+        chitGroupId: ledgerGroup.id,
+        installmentNo: parseInt(auctionData.installmentNo),
+        winningBidderId: parseInt(auctionData.customerId),
+        bidAmount: parseFloat(auctionData.bidAmount)
+      };
+      await axios.post('/api/auctions', payload);
+      showSnackbar(`Auction for Month ${auctionData.installmentNo} recorded successfully!`, 'success');
+      setAuctionDialogOpen(false);
+      await refreshLedger(ledgerGroup.id);
+      fetchGroups();
+    } catch (err) {
+      showSnackbar(err.response?.data?.message || 'Failed to record auction details.', 'error');
+    } finally {
+      setSavingAuction(false);
+    }
+  };
+
   const handleCloseModal = () => {
     setActiveView('list');
     setNewGroup({ 
@@ -420,7 +673,7 @@ export default function ChitGroupsPage() {
       };
       await axios.put(`/api/chits/${editGroupData.id}`, payload);
       showSnackbar('Chit Group updated successfully!', 'success');
-      setOpenEditModal(false);
+      handleCloseEditModal();
       
       // Reload catalog list
       await fetchGroups();
@@ -501,7 +754,7 @@ export default function ChitGroupsPage() {
 
   const handleRegisterAndEnroll = async (e) => {
     e.preventDefault();
-    if (!newCustomerData.name || !newCustomerData.email || !newCustomerData.mobile) {
+    if (!newCustomerData.name || !newCustomerData.mobile) {
       showSnackbar('Please fill in all registration fields.', 'warning');
       return;
     }
@@ -741,11 +994,20 @@ export default function ChitGroupsPage() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Button
+                    onClick={() => handleOpenLedgerView(selectedGroup)}
+                    variant="contained"
+                    size="small"
+                    className="bg-[#10B981] hover:bg-[#059669] text-white font-bold px-3 py-1.5 rounded-xl text-[10px] h-[30px] shadow-sm shadow-emerald-500/20"
+                    style={{ textTransform: 'none' }}
+                  >
+                    View Ledger
+                  </Button>
+                  <Button
                     onClick={() => handleOpenEditModal(selectedGroup)}
                     variant="outlined"
                     size="small"
                     className="border-[#3B82F6] text-[#3B82F6] hover:bg-[#3B82F6]/10 font-bold px-3 py-1.5 rounded-xl text-[10px] h-[30px]"
-                    style={{ color: '#3B82F6', borderColor: '#3B82F6' }}
+                    style={{ color: '#3B82F6', borderColor: '#3B82F6', textTransform: 'none' }}
                   >
                     Edit
                   </Button>
@@ -1681,6 +1943,178 @@ export default function ChitGroupsPage() {
     </div>
   )}
 
+  {/* Ledger Page View */}
+  {activeView === 'ledger' && (
+    <div className="space-y-6 animate-fadeIn">
+      {/* Header */}
+      <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <Typography variant="h5" className="font-extrabold text-slate-800 dark:text-white">
+            Chit Group Ledger: {ledgerGroup?.name}
+          </Typography>
+          <Typography variant="caption" className="text-slate-400 block mt-0.5">
+            Group Code: <span className="font-bold text-[#1E40AF]">{ledgerGroup?.id}</span> • Total Value: <span className="font-bold">{formatCurrency(ledgerGroup?.value)}</span> • Installments: <span className="font-bold">{ledgerGroup?.installments} Months</span>
+          </Typography>
+        </div>
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBack />}
+          onClick={() => setActiveView('list')}
+          className="border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold px-4 py-2.5 rounded-xl text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-all normal-case"
+        >
+          Back to Catalog
+        </Button>
+      </div>
+
+      {ledgerLoading ? (
+        <div className="flex justify-center items-center py-24">
+          <CircularProgress size={50} className="text-[#1E40AF]" />
+        </div>
+      ) : (() => {
+        const columns = [
+          {
+            id: 'customer_code',
+            label: 'Cust Code',
+            width: 100,
+            render: (row) => (
+              <span className="font-bold text-xs text-slate-600 dark:text-slate-400">
+                {row.customer_code || `CUST-${String(row.id).padStart(4, '0')}`}
+              </span>
+            )
+          },
+          {
+            id: 'name',
+            label: 'Cust Name',
+            width: 160,
+            render: (row) => (
+              <span className="font-extrabold text-slate-800 dark:text-white text-sm truncate max-w-[150px]">
+                {row.name}
+              </span>
+            )
+          },
+          ...getLedgerSchedule().map((inst, idx) => {
+            const instAmount = inst.payingAmount || inst.amount;
+            const instDueDate = inst.dueDate;
+            const dateLabel = instDueDate ? new Date(instDueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase() : '—';
+            return {
+              id: `inst_${idx}`,
+              label: `M${idx + 1} (${formatCurrency(instAmount)}) ${dateLabel}`,
+              width: 130,
+              render: (row) => {
+                const isPaid = isInstallmentPaid(row, idx);
+                return (
+                  <div className="flex justify-center w-full">
+                    <button
+                      type="button"
+                      onClick={() => handleCheckboxClick(row, idx, isPaid, instAmount, instDueDate)}
+                      className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors inline-flex cursor-pointer focus:outline-none"
+                    >
+                      {isPaid ? (
+                        <CheckCircle className="text-[#10B981]" fontSize="small" />
+                      ) : (
+                        <span className="w-5 h-5 rounded-full border-2 border-slate-350 dark:border-slate-600 hover:border-blue-500 dark:hover:border-blue-400 flex items-center justify-center text-[10px] text-slate-400 font-bold hover:text-blue-500">
+                          +
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                );
+              }
+            };
+          }),
+          {
+            id: 'chit_taken',
+            label: 'Chit Taken (Auction)',
+            width: 200,
+            render: (row) => {
+              const wonAuction = ledgerAuctions.find(a => a.winning_bidder_id === row.id);
+              if (wonAuction) {
+                return (
+                  <div className="space-y-0.5">
+                    <div className="font-extrabold text-[#C2410C] text-xs">
+                      Month {wonAuction.installment_no}
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-bold">
+                      Discount Bid: {formatCurrency(wonAuction.bid_amount)}
+                    </div>
+                    <div className="text-[9px] text-slate-400 font-medium">
+                      {wonAuction.auction_date ? new Date(wonAuction.auction_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
+                    </div>
+                  </div>
+                );
+              } else {
+                return (
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleOpenAuctionDialog(row)}
+                    className="border-amber-300 dark:border-amber-800 text-amber-600 dark:text-amber-500 hover:bg-amber-500/10 font-bold py-1 px-2 text-[10px] rounded-lg normal-case"
+                    style={{ minWidth: '100px' }}
+                  >
+                    + Log Auction
+                  </Button>
+                );
+              }
+            }
+          },
+          {
+            id: 'guarantor_name',
+            label: 'Guarantor Details',
+            width: 180,
+            render: (row) => row.guarantor_name ? (
+              <div className="space-y-0.5">
+                <div className="font-bold text-xs truncate max-w-[160px]">{row.guarantor_name}</div>
+                <div className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{row.guarantor_mobile}</div>
+              </div>
+            ) : (
+              <span className="text-[11px] text-slate-400 italic">No guarantor registered</span>
+            )
+          },
+          {
+            id: 'actions',
+            label: 'Quick Actions',
+            width: 190,
+            render: (row) => (
+              <div className="flex gap-2 justify-center items-center w-full font-bold">
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => handleOpenManualPayment(row)}
+                  className="bg-[#1E40AF] hover:bg-[#1D4ED8] text-white font-bold py-1 px-2.5 rounded-lg text-[10px] shadow-sm"
+                  style={{ textTransform: 'none', minWidth: '60px' }}
+                >
+                  + Pay
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => handleOpenGuaranteeDialog(row)}
+                  className="border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800 font-bold py-1 px-2.5 rounded-lg text-[10px]"
+                  style={{ textTransform: 'none', minWidth: '85px' }}
+                >
+                  🛡️ Guarantee
+                </Button>
+              </div>
+            )
+          }
+        ];
+
+        return (
+          <CustomGrid
+            columns={columns}
+            data={ledgerMembers}
+            keyField="id"
+            showCheckboxes={false}
+            initialRowsPerPage={10}
+            height={600}
+            rowHeight={65}
+            emptyMessage="No members enrolled in this chit group. Edit the group to add customers."
+          />
+        );
+      })()}
+    </div>
+  )}
+
       {/* Inline Registration Dialog */}
       <Dialog open={openRegisterModal} onClose={() => setOpenRegisterModal(false)} PaperProps={{ className: 'rounded-3xl p-4 w-full max-w-md bg-white dark:bg-[#1E293B]' }}>
         <form onSubmit={handleRegisterAndEnroll}>
@@ -1702,10 +2136,9 @@ export default function ChitGroupsPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Email Address</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Email Address (Optional)</label>
               <input
                 type="email"
-                required
                 placeholder="Enter email address"
                 value={newCustomerData.email}
                 onChange={(e) => setNewCustomerData({ ...newCustomerData, email: e.target.value })}
@@ -1734,6 +2167,165 @@ export default function ChitGroupsPage() {
               className="bg-[#1E40AF] text-white font-bold px-5 rounded-xl normal-case"
             >
               {registerLoading ? 'Registering...' : 'Register & Enroll'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* Interactive Payment Dialog */}
+      <Dialog open={paymentDialogOpen} onClose={() => setPaymentDialogOpen(false)} PaperProps={{ className: 'rounded-3xl p-4 w-full max-w-md bg-white dark:bg-[#1E293B]' }}>
+        <form onSubmit={handleSavePayment}>
+          <DialogTitle className="font-extrabold text-slate-800 dark:text-white pb-1">Record Payment Entry</DialogTitle>
+          <Typography variant="caption" className="text-slate-450 px-6 block pb-4">
+            Record a new installment contribution collection for **{paymentData.customerName}**.
+          </Typography>
+          <DialogContent className="space-y-4 pt-0">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Payment Amount (INR)</label>
+              <input
+                type="number"
+                required
+                value={paymentData.amount}
+                onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })}
+                className="w-full px-4 py-2.5 bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1E40AF] focus:border-transparent transition-all font-medium text-sm"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Payment Method</label>
+              <select
+                value={paymentData.paymentMethod}
+                onChange={(e) => setPaymentData({ ...paymentData, paymentMethod: e.target.value })}
+                className="w-full px-4 py-2.5 bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1E40AF] focus:border-transparent transition-all font-medium text-sm"
+              >
+                <option value="UPI">UPI</option>
+                <option value="Cash">Cash</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+                <option value="Cheque">Cheque</option>
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Payment Date</label>
+              <input
+                type="date"
+                required
+                value={paymentData.paymentDate}
+                onChange={(e) => setPaymentData({ ...paymentData, paymentDate: e.target.value })}
+                className="w-full px-4 py-2.5 bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1E40AF] focus:border-transparent transition-all font-medium text-sm"
+              />
+            </div>
+          </DialogContent>
+          <DialogActions className="px-6 pb-4">
+            <Button onClick={() => setPaymentDialogOpen(false)} className="text-slate-500 font-bold">Cancel</Button>
+            <Button
+              type="submit"
+              disabled={savingPayment}
+              variant="contained"
+              className="bg-[#1E40AF] text-white font-bold px-5 rounded-xl normal-case"
+            >
+              {savingPayment ? 'Saving...' : 'Record Payment'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* Guarantee Dialog */}
+      <Dialog open={guaranteeDialogOpen} onClose={() => setGuaranteeDialogOpen(false)} PaperProps={{ className: 'rounded-3xl p-4 w-full max-w-md bg-white dark:bg-[#1E293B]' }}>
+        <form onSubmit={handleSaveGuarantee}>
+          <DialogTitle className="font-extrabold text-slate-800 dark:text-white pb-1">Register Guarantor</DialogTitle>
+          <Typography variant="caption" className="text-slate-450 px-6 block pb-4">
+            Add or update the guarantor details for **{guaranteeData.customerName}**.
+          </Typography>
+          <DialogContent className="space-y-4 pt-0">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Guarantor Name</label>
+              <input
+                type="text"
+                required
+                placeholder="Enter guarantor's full name"
+                value={guaranteeData.guarantorName}
+                onChange={(e) => setGuaranteeData({ ...guaranteeData, guarantorName: e.target.value })}
+                className="w-full px-4 py-2.5 bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#1E40AF] focus:border-transparent transition-all font-medium text-sm"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Guarantor Mobile</label>
+              <input
+                type="text"
+                required
+                placeholder="Enter guarantor's mobile number"
+                value={guaranteeData.guarantorMobile}
+                onChange={(e) => setGuaranteeData({ ...guaranteeData, guarantorMobile: e.target.value })}
+                className="w-full px-4 py-2.5 bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#1E40AF] focus:border-transparent transition-all font-medium text-sm"
+              />
+            </div>
+          </DialogContent>
+          <DialogActions className="px-6 pb-4">
+            <Button onClick={() => setGuaranteeDialogOpen(false)} className="text-slate-500 font-bold">Cancel</Button>
+            <Button
+              type="submit"
+              disabled={savingGuarantee}
+              variant="contained"
+              className="bg-[#1E40AF] text-white font-bold px-5 rounded-xl normal-case"
+            >
+              {savingGuarantee ? 'Saving...' : 'Save Guarantor'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* Log Auction Dialog */}
+      <Dialog open={auctionDialogOpen} onClose={() => setAuctionDialogOpen(false)} PaperProps={{ className: 'rounded-3xl p-4 w-full max-w-md bg-white dark:bg-[#1E293B]' }}>
+        <form onSubmit={handleSaveAuction}>
+          <DialogTitle className="font-extrabold text-slate-800 dark:text-white pb-1">Log Auction Winner (Chit Taken)</DialogTitle>
+          <Typography variant="caption" className="text-slate-450 px-6 block pb-4">
+            Record auction winning details for **{auctionData.customerName}** in group '{ledgerGroup?.name}'.
+          </Typography>
+          <DialogContent className="space-y-4 pt-0">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Installment Month</label>
+              <select
+                required
+                value={auctionData.installmentNo}
+                onChange={(e) => setAuctionData({ ...auctionData, installmentNo: e.target.value })}
+                className="w-full px-4 py-2.5 bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1E40AF] focus:border-transparent transition-all font-medium text-sm"
+              >
+                <option value="" disabled>Select Month</option>
+                {Array.from({ length: ledgerGroup ? parseInt(ledgerGroup.installments) || 0 : 0 }, (_, i) => {
+                  const m = i + 1;
+                  const alreadyWon = ledgerAuctions.some(a => a.installment_no === m);
+                  return (
+                    <option key={m} value={m} disabled={alreadyWon}>
+                      Month {m} {alreadyWon ? '(Already Recorded)' : ''}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Bid Discount Amount (₹)</label>
+              <input
+                type="number"
+                required
+                placeholder="Enter discount amount"
+                value={auctionData.bidAmount}
+                onChange={(e) => setAuctionData({ ...auctionData, bidAmount: e.target.value })}
+                className="w-full px-4 py-2.5 bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#1E40AF] focus:border-transparent transition-all font-medium text-sm"
+              />
+            </div>
+          </DialogContent>
+          <DialogActions className="px-6 pb-4">
+            <Button onClick={() => setAuctionDialogOpen(false)} className="text-slate-500 font-bold">Cancel</Button>
+            <Button
+              type="submit"
+              disabled={savingAuction}
+              variant="contained"
+              className="bg-[#1E40AF] text-white font-bold px-5 rounded-xl normal-case"
+            >
+              {savingAuction ? 'Saving...' : 'Record Auction'}
             </Button>
           </DialogActions>
         </form>

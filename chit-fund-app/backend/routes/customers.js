@@ -82,8 +82,8 @@ router.put('/:id', authenticateJWT, resolveTenant, authorizeRoles('Super Admin',
   const { name, email, mobile, status } = req.body;
   const tenantDb = req.db;
 
-  if (!name || !email || !mobile) {
-    return res.status(400).json({ message: 'Name, Email and Mobile are required' });
+  if (!name || !mobile) {
+    return res.status(400).json({ message: 'Name and Mobile are required' });
   }
 
   try {
@@ -92,22 +92,20 @@ router.put('/:id', authenticateJWT, resolveTenant, authorizeRoles('Super Admin',
       return res.status(404).json({ message: 'Customer not found' });
     }
 
-    // Verify if Email or Mobile is registered to another customer
-    const [existingEmail] = await tenantDb.query('SELECT * FROM customers WHERE email = ? AND id != ?', [email, id]);
-    if (existingEmail.length > 0) {
-      return res.status(400).json({ message: 'A customer with this email is already registered.' });
+    // Verify if Email is registered to another customer
+    if (email) {
+      const [existingEmail] = await tenantDb.query('SELECT * FROM customers WHERE email = ? AND id != ?', [email, id]);
+      if (existingEmail.length > 0) {
+        return res.status(400).json({ message: 'A customer with this email is already registered.' });
+      }
     }
 
-    const [existingMobile] = await tenantDb.query('SELECT * FROM customers WHERE mobile = ? AND id != ?', [mobile, id]);
-    if (existingMobile.length > 0) {
-      return res.status(400).json({ message: 'A customer with this mobile number is already registered.' });
-    }
 
     const customer = customerRows[0];
 
     await tenantDb.query(
       'UPDATE customers SET name = ?, email = ?, mobile = ?, status = ? WHERE id = ?',
-      [name, email, mobile, status || customer.status, id]
+      [name, email || '', mobile, status || customer.status, id]
     );
 
     const [updatedRows] = await tenantDb.query('SELECT * FROM customers WHERE id = ?', [id]);
@@ -123,8 +121,8 @@ router.post('/', authenticateJWT, resolveTenant, authorizeRoles('Super Admin', '
   const { name, email, mobile, chitGroupId } = req.body;
   const tenantDb = req.db;
 
-  if (!name || !email || !mobile || !chitGroupId) {
-    return res.status(400).json({ message: 'All fields are required (Name, Email, Mobile, Chit Group)' });
+  if (!name || !mobile || !chitGroupId) {
+    return res.status(400).json({ message: 'Name, Mobile, and Chit Group are required' });
   }
 
   try {
@@ -136,21 +134,19 @@ router.post('/', authenticateJWT, resolveTenant, authorizeRoles('Super Admin', '
     const group = groupRows[0];
     const monthlyContribution = parseFloat(group.monthly_contribution);
 
-    // Verify if Email or Mobile is already registered
-    const [existingEmail] = await tenantDb.query('SELECT * FROM customers WHERE email = ?', [email]);
-    if (existingEmail.length > 0) {
-      return res.status(400).json({ message: 'A customer with this email is already registered.' });
+    // Verify if Email is already registered (if provided)
+    if (email) {
+      const [existingEmail] = await tenantDb.query('SELECT * FROM customers WHERE email = ?', [email]);
+      if (existingEmail.length > 0) {
+        return res.status(400).json({ message: 'A customer with this email is already registered.' });
+      }
     }
 
-    const [existingMobile] = await tenantDb.query('SELECT * FROM customers WHERE mobile = ?', [mobile]);
-    if (existingMobile.length > 0) {
-      return res.status(400).json({ message: 'A customer with this mobile number is already registered.' });
-    }
 
     // 2. Insert customer details
     const [insertResult] = await tenantDb.query(
       'INSERT INTO customers (name, email, mobile, total_chits, paid_amount, pending_amount, status) VALUES (?, ?, ?, 1, 0.00, 0.00, "Pending")',
-      [name, email, mobile]
+      [name, email || '', mobile]
     );
     const customerId = insertResult.insertId;
     const customerCode = `CUST-${String(customerId).padStart(4, '0')}`;
@@ -173,19 +169,23 @@ router.post('/', authenticateJWT, resolveTenant, authorizeRoles('Super Admin', '
     );
 
     // 5. SMTP Email Dispatch Simulation
-    const subject = `Welcome to FinCore Chit Funds - Scheme Enrollment`;
-    const emailBody = `Dear ${name},\n\nWelcome to FinCore Chit Funds! You have successfully registered and enrolled in the Chit Plan '${group.name}' (${chitGroupId}).\n\nYour Customer ID is ${customerCode}.\n\nYour monthly installment contribution is INR ${monthlyContribution.toLocaleString('en-IN')}.\n\nThank you for choosing us.\n\nFinCore Security and Accounting System`;
-    
-    console.log('\n==================================================');
-    console.log('SIMULATING OUTBOUND WELCOME EMAIL (SMTP TRANSMISSION):');
-    console.log(`To: ${email}`);
-    console.log(`Subject: ${subject}`);
-    console.log('--------------------------------------------------');
-    console.log(emailBody);
-    console.log('==================================================\n');
+    if (email && email.includes('@')) {
+      const subject = `Welcome to FinCore Chit Funds - Scheme Enrollment`;
+      const emailBody = `Dear ${name},\n\nWelcome to FinCore Chit Funds! You have successfully registered and enrolled in the Chit Plan '${group.name}' (${chitGroupId}).\n\nYour Customer ID is ${customerCode}.\n\nYour monthly installment contribution is INR ${monthlyContribution.toLocaleString('en-IN')}.\n\nThank you for choosing us.\n\nFinCore Security and Accounting System`;
+      
+      console.log('\n==================================================');
+      console.log('SIMULATING OUTBOUND WELCOME EMAIL (SMTP TRANSMISSION):');
+      console.log(`To: ${email}`);
+      console.log(`Subject: ${subject}`);
+      console.log('--------------------------------------------------');
+      console.log(emailBody);
+      console.log('==================================================\n');
+    }
 
     // 6. Log email registration in system notifications log
-    const notificationMsg = `Customer ${name} (ID: ${customerCode}) successfully registered. Outbound welcome email template compiled and dispatched to ${email}. Subscribed Group: ${chitGroupId}.`;
+    const notificationMsg = email
+      ? `Customer ${name} (ID: ${customerCode}) successfully registered. Outbound welcome email template compiled and dispatched to ${email}. Subscribed Group: ${chitGroupId}.`
+      : `Customer ${name} (ID: ${customerCode}) successfully registered without email. Subscribed Group: ${chitGroupId}.`;
     await tenantDb.query(
       'INSERT INTO notifications (title, message, is_read, type) VALUES (?, ?, FALSE, "success")',
       [`Customer Registered: ${name}`, notificationMsg]

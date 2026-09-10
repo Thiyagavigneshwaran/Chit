@@ -16,6 +16,9 @@ export const sendCustomerReminderEmail = async (tenantDb, customerId) => {
       return { success: false, error: 'Customer not found' };
     }
     const customer = customerRows[0];
+    if (!customer.email || !customer.email.includes('@')) {
+      return { success: false, error: 'Customer does not have a valid email address.' };
+    }
 
     // 2. Fetch joined chit groups
     const [joinedChits] = await tenantDb.query(`

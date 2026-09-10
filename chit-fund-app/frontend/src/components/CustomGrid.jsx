@@ -10,7 +10,9 @@ export default function CustomGrid({
   keyField = 'id',
   initialRowsPerPage = 13,
   onSelectionChange = null,
-  emptyMessage = 'No records found.'
+  emptyMessage = 'No records found.',
+  height = 520,
+  rowHeight = undefined
 }) {
   // Map rows to include S.No and unique id for DataGrid
   const rows = data.map((row, idx) => {
@@ -57,7 +59,7 @@ export default function CustomGrid({
       sx={{ 
         width: '100%',
         // Set dynamic height or fallback height depending on number of rows to look extremely neat
-        height: 520,
+        height: height,
         minHeight: 250,
         '& .MuiDataGrid-root': {
           border: '1px solid',
@@ -118,7 +120,8 @@ export default function CustomGrid({
         rows={rows}
         columns={muiColumns}
         loading={loading}
-        density="compact"
+        density={rowHeight ? "standard" : "compact"}
+        rowHeight={rowHeight}
         checkboxSelection={showCheckboxes}
         disableRowSelectionOnClick
         showCellVerticalLines

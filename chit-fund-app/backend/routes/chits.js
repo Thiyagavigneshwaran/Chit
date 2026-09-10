@@ -30,17 +30,27 @@ router.get('/:id', authenticateJWT, resolveTenant, async (req, res) => {
       return res.status(404).json({ message: 'Chit Group not found' });
     }
 
-    // Get group members
+    // Get group members with their total paid amount for this specific group + guarantor info
     const [members] = await tenantDb.query(`
-      SELECT c.id, c.name, c.email, c.mobile, c.status
+      SELECT c.id, c.customer_code, c.name, c.email, c.mobile, c.status,
+             (SELECT COALESCE(SUM(amount), 0) FROM collections WHERE customer_id = c.id AND chit_group_id = ?) as total_paid,
+             g.guarantor_name, g.guarantor_mobile
       FROM customers c
       JOIN customer_chits cc ON c.id = cc.customer_id
+      LEFT JOIN guarantees g ON g.customer_id = c.id AND g.chit_group_id = ?
       WHERE cc.chit_group_id = ?
-    `, [id]);
+    `, [id, id, id]);
+
+    // Get group auctions
+    const [auctions] = await tenantDb.query(
+      'SELECT * FROM auctions WHERE chit_group_id = ? ORDER BY installment_no ASC',
+      [id]
+    );
 
     res.json({
       group: groupRows[0],
-      members
+      members,
+      auctions
     });
   } catch (error) {
     console.error('Error fetching chit group details:', error);
@@ -187,6 +197,32 @@ router.put('/:id', authenticateJWT, resolveTenant, async (req, res) => {
     res.json({ message: 'Chit Group updated successfully' });
   } catch (error) {
     console.error('Error updating chit group:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
+// Add or update guarantor details for a group member
+router.post('/:id/guarantee', authenticateJWT, resolveTenant, async (req, res) => {
+  const { id } = req.params; // chitGroupId
+  const { customerId, guarantorName, guarantorMobile } = req.body;
+  const tenantDb = req.db;
+
+  if (!customerId || !guarantorName || !guarantorMobile) {
+    return res.status(400).json({ message: 'Customer ID, Guarantor Name, and Mobile Number are required.' });
+  }
+
+  try {
+    await tenantDb.query(`
+      INSERT INTO guarantees (customer_id, chit_group_id, guarantor_name, guarantor_mobile)
+      VALUES (?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        guarantor_name = VALUES(guarantor_name),
+        guarantor_mobile = VALUES(guarantor_mobile)
+    `, [customerId, id, guarantorName, guarantorMobile]);
+
+    res.json({ message: 'Guarantor details saved successfully.' });
+  } catch (error) {
+    console.error('Error saving guarantor details:', error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 });

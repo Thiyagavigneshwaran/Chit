@@ -129,15 +129,22 @@ export const initDb = async () => {
       ON DUPLICATE KEY UPDATE name=VALUES(name), db_name=VALUES(db_name)
     `);
 
-    // Seed users with encrypted passwords (admin123, manager123, agent123, accountant123)
+    // Seed users with encrypted passwords (manager123, agent123, accountant123, Vijayakumar)
     await connection.query(`
       INSERT INTO users (username, password, name, role, tenant_id) VALUES
-      ('admin', '$2a$10$Wl4.fVviXNwuT7sSC3ogveKEVknmv570KC/6EkrpXXqMaM19vCUWC', 'Vijay Kumar', 'Super Admin', 'tenant_1'),
+      ('Vijayakumar', '$2a$10$vKpxMcXeIgxn2ao4/f/kSuvLU6Yr643oOY5eLx0/0qTM0ZPvyj9mW', 'Vijay Kumar', 'Super Admin', 'tenant_1'),
       ('manager', '$2a$10$.sLIooSMjEFG2rEvX.zLde/Cc1OG7FpE3MJX8FTTTYGnCeNDPY5o2', 'Suresh Kumar', 'Manager', 'tenant_2'),
       ('agent', '$2a$10$WpA/whcmpCd/z5UFDEmPkupDp4DTt0eY7Op5F1EeI81zyIuig96wS', 'Vijay Sharma', 'Collection Agent', 'tenant_1'),
       ('accountant', '$2a$10$Nhk5hdUrLSY.tqEwQaHio.1RO1cmM7VVMUejSmxWgLIyLk3uc3SCG', 'Meera Nair', 'Accountant', 'tenant_1')
       ON DUPLICATE KEY UPDATE password=VALUES(password), name=VALUES(name), role=VALUES(role), tenant_id=VALUES(tenant_id)
     `);
+
+    // Clean up old admin user
+    try {
+      await connection.query("DELETE FROM users WHERE username = 'admin'");
+    } catch (e) {
+      // Ignore cleanup error if already deleted
+    }
 
     // 2. Initialize Tenant 1 DB for default Year 2026
     await connection.query('CREATE DATABASE IF NOT EXISTS chit_fund_tenant_1_2026');
@@ -306,6 +313,20 @@ const createTenantTables = async (connection) => {
       transaction_ref VARCHAR(100) DEFAULT NULL,
       notes TEXT DEFAULT NULL,
       FOREIGN KEY (loan_id) REFERENCES loans(id) ON DELETE CASCADE
+    )
+  `);
+
+  await connection.query(`
+    CREATE TABLE IF NOT EXISTS guarantees (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      customer_id INT NOT NULL,
+      chit_group_id VARCHAR(50) NOT NULL,
+      guarantor_name VARCHAR(100) NOT NULL,
+      guarantor_mobile VARCHAR(20) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (customer_id) REFERENCES customers(id),
+      FOREIGN KEY (chit_group_id) REFERENCES chit_groups(id),
+      UNIQUE KEY unique_cust_group (customer_id, chit_group_id)
     )
   `);
 

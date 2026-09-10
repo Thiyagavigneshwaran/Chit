@@ -116,7 +116,7 @@ export default function CustomersPage() {
 
   const handleRegisterCustomer = async (e) => {
     e.preventDefault();
-    if (!newCustomer.name || !newCustomer.email || !newCustomer.mobile || !newCustomer.chitGroupId) {
+    if (!newCustomer.name || !newCustomer.mobile || !newCustomer.chitGroupId) {
       showSnackbar('Please complete all registration fields.', 'warning');
       return;
     }
@@ -825,10 +825,9 @@ export default function CustomersPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Email Address</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Email Address (Optional)</label>
               <input
                 type="email"
-                required
                 placeholder="Enter email address"
                 value={newCustomer.email}
                 onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
